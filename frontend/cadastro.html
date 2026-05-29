@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TaskInsight • Cadastro</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<main class="auth-shell">
+  <div class="auth-card">
+    <h1 class="brand">Começar agora</h1>
+    <p class="brand-sub">Crie sua conta para simplificar sua rotina.</p>
+    <form id="reg">
+      <div class="field"><label>Nome completo</label><input name="name" placeholder="Ex: Maria Silva" required></div>
+      <div class="field"><label>E-mail</label><input name="email" type="email" placeholder="nome@exemplo.com" required></div>
+      <div class="field"><label>Senha</label><input name="password" type="password" placeholder="Mínimo 8 caracteres" required></div>
+      <button class="btn" type="submit">Criar Conta</button>
+      <div id="err" class="error"></div>
+      <p class="foot">Já tem uma conta? <a href="index.html">Faça login</a></p>
+    </form>
+  </div>
+</main>
+<footer class="site">© 2026 TaskInsight. Built for clarity.</footer>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>bindRegister(document.getElementById("reg"));</script>
+</body>
+</html>
