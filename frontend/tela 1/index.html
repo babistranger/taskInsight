@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskInsight — Quadro de Tarefas</title>
+
+  <!-- ============================================================
+       TELA 1 — QUADRO KANBAN DE TAREFAS
+       Back-end relacionado:
+         GET  {API_BASE}/tasks          -> lista de tarefas (renderiza colunas)
+         POST {API_BASE}/tasks          -> criar nova tarefa (FAB / botão "Nova Tarefa")
+         PUT  {API_BASE}/tasks/:id      -> mover tarefa entre colunas (futuro)
+
+       Header Authorization: Bearer <ti_token>
+       ============================================================ -->
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar">
+
+      <!-- Logo / nome da app (estático) -->
+      <div class="sb-brand">
+        <h1>TaskInsight</h1>
+        <span>Produtividade</span>
+      </div>
+
+      <!-- Menu de navegação (estático; links internos do front) -->
+      <nav class="sb-nav">
+        <div class="nav-group">
+          <a href="#" class="nav-item active">
+            <i data-lucide="layout-dashboard"></i> Dashboard
+            <i data-lucide="chevron-down" class="chev"></i>
+          </a>
+          <div class="sub">
+            <a href="index.html" class="sub-item active">Quadro de Tarefas</a>
+            <a href="../tela%202/index.html" class="sub-item">Analytics</a>
+          </div>
+        </div>
+
+        <a href="#" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
+        <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
+      </nav>
+
+      <!-- Rodapé do sidebar -->
+      <div class="sb-footer">
+        <!-- Botão "Nova Tarefa" -> dispara modal/POST /tasks (ver script.js) -->
+        <button class="btn btn-accent btn-block"><i data-lucide="plus"></i> Nova Tarefa</button>
+
+        <!-- Card do usuário logado
+             ⚙️  Estes textos são SOBRESCRITOS pelo script.js usando os dados de
+                 localStorage.ti_user (vindo de /auth/login):
+                    #userName -> user.name
+                    #userRole -> user.role
+        -->
+        <div class="user">
+          <div class="avatar">RS</div>
+          <div>
+            <strong id="userName">Ricardo Silva</strong>
+            <small id="userRole">Desenvolvedor FrontEnd</small>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+
+      <!-- Topbar: busca + ações (visual; sem chamada de API por enquanto) -->
+      <header class="topbar">
+        <div class="search">
+          <i data-lucide="search"></i>
+          <!-- Futuro: ao digitar, pode chamar GET /tasks?q=... -->
+          <input type="search" placeholder="Pesquisar tarefas..." />
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" aria-label="Notificações"><i data-lucide="bell"></i></button>
+          <button class="icon-btn" aria-label="Ajuda"><i data-lucide="help-circle"></i></button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="page-head">
+          <h2>Quadro de Tarefas</h2>
+          <!-- Futuro: abrir painel de filtros e chamar GET /tasks?status=...&priority=... -->
+          <button class="btn btn-outline"><i data-lucide="sliders-horizontal"></i> Filtrar</button>
+        </div>
+
+        <!-- ⭐ Container onde o KANBAN é renderizado dinamicamente.
+             O script.js -> renderBoard() preenche este elemento usando os
+             dados de GET /tasks. Cada tarefa vira um <article class="card-task">.
+        -->
+        <div id="board" class="board"></div>
+      </section>
+
+      <!-- Botão flutuante (FAB) para criar tarefa rapidamente -> POST /tasks -->
+      <button class="fab" aria-label="Adicionar tarefa"><i data-lucide="plus"></i></button>
+    </main>
+  </div>
+
+  <!-- Lógica do board + chamadas à API -->
+  <script src="script.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

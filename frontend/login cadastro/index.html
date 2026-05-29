@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskInsight — Cadastro</title>
+
+  <!-- ============================================================
+       TELA DE CADASTRO
+       Back-end relacionado: POST {API_BASE}/auth/register
+       Body:     { name, email, password }
+       Resposta: { token, user: { name, role } }
+       ============================================================ -->
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <div class="signup-grid">
+
+      <!-- Coluna da esquerda: apresentação (estática) -->
+      <section class="intro">
+        <h1 class="brand-title">TaskInsight</h1>
+        <p class="lead">Gerencie suas tarefas com clareza cognitiva. Um ambiente calmo e previsível para sua produtividade florescer.</p>
+        <div class="illus">
+          <i data-lucide="layout-dashboard"></i>
+        </div>
+      </section>
+
+      <!-- Coluna da direita: formulário -->
+      <section class="card">
+        <header class="card-head">
+          <h2>Começar agora</h2>
+          <p class="muted">Crie sua conta para simplificar sua rotina.</p>
+        </header>
+
+        <!-- Formulário tratado em script.js (id="signupForm") -->
+        <form id="signupForm" novalidate>
+
+          <!-- Nome -> body.name -->
+          <div class="field">
+            <label for="name">Nome completo</label>
+            <div class="input-wrap">
+              <i data-lucide="user" class="icon-left"></i>
+              <input id="name" name="name" type="text" placeholder="Seu nome" required />
+            </div>
+          </div>
+
+          <!-- E-mail -> body.email -->
+          <div class="field">
+            <label for="email">E-mail</label>
+            <div class="input-wrap">
+              <i data-lucide="mail" class="icon-left"></i>
+              <input id="email" name="email" type="email" placeholder="seu@email.com" required />
+            </div>
+          </div>
+
+          <!-- Senha -> body.password (mín. 6 chars; back-end deve revalidar) -->
+          <div class="field">
+            <label for="password">Senha</label>
+            <div class="input-wrap">
+              <i data-lucide="lock" class="icon-left"></i>
+              <input id="password" name="password" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" />
+              <!-- Botão olho (somente UI) -->
+              <button type="button" class="icon-btn" id="togglePass" aria-label="Mostrar senha">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Criar Conta</button>
+
+          <!-- Mensagem de feedback (sucesso/erro) preenchida pelo script -->
+          <p id="msg" class="form-msg" role="status"></p>
+
+          <p class="muted center" style="margin-top:14px">
+            Já tem uma conta? <a class="link" href="../login/index.html">Faça login</a>
+          </p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Accessibility Statement</a>
+      </div>
+      <p>© 2024 TaskInsight. Built for clarity.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

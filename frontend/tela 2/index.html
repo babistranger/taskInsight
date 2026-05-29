@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskInsight — Analytics</title>
+
+  <!-- ============================================================
+       TELA 2 — DASHBOARD DE ANALYTICS
+       Back-end relacionado:
+         GET {API_BASE}/analytics/overview
+       Resposta esperada:
+         {
+           progress: number (0-100),
+           deliveries: [{ title, sub, badge, cls }],
+           timeArea:   [{ label, value, color }],
+           distribution: { labels:[], completed:[], allocated:[] }
+         }
+       ============================================================ -->
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ SIDEBAR (igual ao da tela 1) ============ -->
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <h1>TaskInsight</h1>
+        <span>Produtividade</span>
+      </div>
+
+      <nav class="sb-nav">
+        <div class="nav-group">
+          <a href="#" class="nav-item active">
+            <i data-lucide="layout-dashboard"></i> Dashboard
+            <i data-lucide="chevron-down" class="chev"></i>
+          </a>
+          <div class="sub">
+            <a href="../tela%201/index.html" class="sub-item">Quadro de Tarefas</a>
+            <a href="index.html" class="sub-item active">Analytics</a>
+          </div>
+        </div>
+
+        <a href="#" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
+        <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
+      </nav>
+
+      <div class="sb-footer">
+        <!-- No script.js desta tela, o botão "Nova Tarefa" redireciona para a tela 1 -->
+        <button class="btn btn-accent btn-block"><i data-lucide="plus"></i> Nova Tarefa</button>
+
+        <!-- Dados do usuário (preenchidos pelo script com localStorage.ti_user) -->
+        <div class="user">
+          <div class="avatar">RS</div>
+          <div>
+            <strong id="userName">Ricardo Silva</strong>
+            <small id="userRole">Desenvolvedor FullStack</small>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <i data-lucide="search"></i>
+          <input type="search" placeholder="Pesquisar métricas ou tarefas..." />
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn"><i data-lucide="bell"></i></button>
+          <button class="icon-btn"><i data-lucide="help-circle"></i></button>
+        </div>
+      </header>
+
+      <section class="content">
+
+        <!-- Cabeçalho da página (textos estáticos; botões podem virar exports/filters) -->
+        <div class="page-head">
+          <div>
+            <h2>Dashboard de Analytics</h2>
+            <p class="muted">Visão estratégica do Projeto Apollo</p>
+          </div>
+          <div class="head-actions">
+            <!-- Futuro: abrir date-picker e chamar GET /analytics/overview?range=30d -->
+            <button class="btn btn-outline"><i data-lucide="calendar"></i> Últimos 30 dias</button>
+            <!-- Futuro: GET /analytics/export -> download PDF/CSV -->
+            <button class="btn btn-primary"><i data-lucide="upload"></i> Exportar Relatório</button>
+          </div>
+        </div>
+
+        <!-- ============ LINHA SUPERIOR: Progresso + Entregas ============ -->
+        <div class="grid-top">
+
+          <!-- Card "Meu Progresso"
+               Dados vindos de data.progress (number 0-100):
+                 #progressPct -> texto "84%"
+                 #progressBar -> width da barra
+               KPIs (Próxima Entrega / Bloqueadores / Carga Semanal) estão
+               estáticos por enquanto. Para deixá-los dinâmicos basta extender
+               o contrato da API com, por ex.:
+                 { nextDelivery, blockers, weeklyLoad }
+               e atualizar via script.js. -->
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h3>Meu Progresso</h3>
+                <p class="muted">Progresso Geral e Deadlines Críticas</p>
+              </div>
+              <div class="big-num">
+                <span id="progressPct">84%</span>   <!-- ← preenchido pelo script -->
+                <small>Concluído</small>
+              </div>
+            </div>
+            <div class="progress">
+              <div class="progress-bar" id="progressBar" style="width:84%"></div>  <!-- ← width via script -->
+            </div>
+
+            <div class="kpi-row">
+              <div class="kpi">
+                <div class="kpi-h"><i data-lucide="calendar"></i> Próxima Entrega</div>
+                <strong>MVP Release</strong>
+                <small>Em 3 dias</small>
+              </div>
+              <div class="kpi">
+                <div class="kpi-h"><i data-lucide="alert-circle"></i> Bloqueadores</div>
+                <strong>2 Pendências</strong>
+                <small>QA Necessário</small>
+              </div>
+              <div class="kpi">
+                <div class="kpi-h"><i data-lucide="clock"></i> Carga Semanal</div>
+                <strong>38 Horas</strong>
+                <small>Foco em Infra</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card "Minhas Entregas"
+               #deliveries é uma <ul> preenchida pelo script com data.deliveries.
+               Cada item esperado: { title, sub, badge, cls } -->
+          <div class="card">
+            <div class="card-h">
+              <h3>Minhas Entregas</h3>
+              <button class="icon-btn"><i data-lucide="more-vertical"></i></button>
+            </div>
+            <ul class="delivery" id="deliveries"></ul>
+          </div>
+        </div>
+
+        <!-- ============ LINHA INFERIOR: Tempo por Área + Distribuição ============ -->
+        <div class="grid-bottom">
+
+          <!-- Card "Tempo por Área"
+               #timeArea é preenchido pelo script com data.timeArea.
+               Cada item: { label, value, color } -> vira uma barra horizontal. -->
+          <div class="card">
+            <h3>Tempo por Área</h3>
+            <div id="timeArea" class="bars"></div>
+            <!-- Legenda visual (estática) -->
+            <div class="legend">
+              <span><i class="dot" style="background:var(--accent)"></i> Alta Prioridade</span>
+              <span><i class="dot" style="background:var(--primary)"></i> Infraestrutura</span>
+            </div>
+          </div>
+
+          <!-- Card "Distribuição Diária"
+               <canvas id="distChart"> é renderizado pelo Chart.js usando
+               data.distribution = { labels, completed, allocated } -->
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h3>Distribuição Diária</h3>
+                <p class="muted">Frequência de atividades por categoria</p>
+              </div>
+              <button class="icon-btn"><i data-lucide="filter"></i></button>
+            </div>
+            <div class="chart-wrap"><canvas id="distChart"></canvas></div>
+            <div class="legend center">
+              <span><i class="dot" style="background:#b8cdea"></i> Tarefas Completas</span>
+              <span><i class="dot" style="background:var(--accent)"></i> Tempo Alocado</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Chart.js (gráfico de barras) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Lógica + chamada de API -->
+  <script src="script.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
