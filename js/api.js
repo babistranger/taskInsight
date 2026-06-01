@@ -11,6 +11,7 @@ function logout() { localStorage.clear(); location.href = "index.html"; }
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token()) headers["Authorization"] = `Bearer ${token()}`;
+  
   const res = await fetch(`${API_URL}${path}`, { ...opts, headers });
   if (res.status === 401) { logout(); throw new Error("unauthorized"); }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "request_error");

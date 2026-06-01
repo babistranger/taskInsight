@@ -14,13 +14,16 @@ async function loadAll() {
 }
 
 function renderKpis(s) {
+
   const k = document.getElementById("kpis");
+
   const items = [
     { ico: "📋", lbl: "Pendentes", val: s.by_status.a_fazer || 0 },
     { ico: "🔄", lbl: "Em Progresso", val: s.by_status.em_progresso || 0 },
     { ico: "✅", lbl: "Concluídas", val: s.by_status.concluido || 0 },
     { ico: "📊", lbl: "Conclusão", val: `${s.completion_rate}%` },
   ];
+  
   k.innerHTML = items.map(i => `
     <div class="kpi"><div class="ico">${i.ico}</div>
       <div><div class="lbl">${i.lbl}</div><div class="val">${i.val}</div></div></div>`).join("");
