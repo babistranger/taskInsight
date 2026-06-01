@@ -84,4 +84,3 @@ taskinsight/
 └── docs/
     └── REQUISITOS.md
 ```
-oi
