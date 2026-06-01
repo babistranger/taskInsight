@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskInsight — Login</title>
+
+  <!-- ============================================================
+       TELA DE LOGIN
+       Back-end relacionado: POST {API_BASE}/auth/login
+       Resposta esperada: { token: "...", user: { name, role } }
+       Após sucesso -> redireciona para "tela 2" (dashboard)
+       ============================================================ -->
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <div class="auth-wrap">
+
+      <!-- Cabeçalho / branding (estático, não vem da API) -->
+      <header class="brand">
+        <h1 class="brand-title">TaskInsight</h1>
+        <p class="brand-sub">Gerencie seu tempo com clareza e calma.</p>
+      </header>
+
+      <section class="card">
+        <!-- FORMULÁRIO DE LOGIN
+             id="loginForm" é usado pelo script.js para interceptar o submit
+             e enviar os dados para a API. -->
+        <form id="loginForm" novalidate>
+
+          <!-- Campo: E-mail
+               -> Enviado para a API no body: { email } -->
+          <div class="field">
+            <label for="email">E-mail</label>
+            <div class="input-wrap">
+              <i class="icon" data-lucide></i>
+              <i data-lucide="mail" class="icon-left"></i>
+              <input id="email" name="email" type="email" placeholder="seu@email.com" required />
+            </div>
+          </div>
+
+          <!-- Campo: Senha
+               -> Enviado para a API no body: { password }
+               -> Link "Esqueceu a senha?" pode futuramente apontar para
+                  POST {API_BASE}/auth/forgot-password -->
+          <div class="field">
+            <div class="row-between">
+              <label for="password">Senha</label>
+              <a href="#" class="link-muted">Esqueceu a senha?</a>
+            </div>
+            <div class="input-wrap">
+              <i data-lucide="lock" class="icon-left"></i>
+              <input id="password" name="password" type="password" placeholder="••••••••" required minlength="6" />
+              <!-- Botão "olho" só alterna visibilidade da senha (UI), não vai à API -->
+              <button type="button" class="icon-btn" id="togglePass" aria-label="Mostrar senha">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Botão de envio: dispara o submit tratado em script.js -->
+          <button type="submit" class="btn btn-primary">
+            Entrar <i data-lucide="arrow-right"></i>
+          </button>
+
+          <!-- Mensagem dinâmica preenchida pelo script (sucesso/erro da API) -->
+          <p id="msg" class="form-msg" role="status"></p>
+
+          <div class="divider"></div>
+
+          <!-- Link para a tela de cadastro -->
+          <p class="muted center">
+            Não tem uma conta?
+            <a href="../login%20cadastro/index.html" class="link">Cadastre-se</a>
+          </p>
+        </form>
+      </section>
+
+      <p class="footnote">Desenvolvido com foco em acessibilidade cognitiva e simplicidade visual.</p>
+    </div>
+  </main>
+
+  <!-- Rodapé estático -->
+  <footer class="page-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Accessibility Statement</a>
+      </div>
+      <p>© 2024 TaskInsight. Built for clarity.</p>
+    </div>
+  </footer>
+
+  <!-- Lógica de submit + integração com a API -->
+  <script src="script.js"></script>
+  <!-- Lib de ícones Lucide (apenas visual) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
