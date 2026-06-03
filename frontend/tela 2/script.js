@@ -23,7 +23,7 @@
    ============================================================ */
 
 // >>> TROCAR pela URL real do back-end <<<
-const API_BASE = "https://api.taskinsight.example.com";
+const API_BASE = "http://localhost:3000";
 
 /* ---------- MOCK fallback ----------
    Espelha exatamente o contrato esperado da API. Usado quando

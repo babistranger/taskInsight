@@ -10,7 +10,7 @@
    ============================================================ */
 
 // >>> TROCAR pela URL real do back-end <<<
-const API_BASE = "https://api.taskinsight.example.com";
+const API_BASE = "http://localhost:3000";
 
 /* ---------- MOCK fallback ----------
    Usado quando a API não responde. Cada objeto representa o

@@ -9,7 +9,7 @@
    ============================================================ */
 
 // >>> TROCAR pela URL real do back-end <<<
-const API_BASE = "https://api.taskinsight.example.com";
+const API_BASE = "http://localhost:3000";
 
 /* ---- UI: botão "olho" mostrar/esconder senha (não envolve API) ---- */
 const toggle = document.getElementById("togglePass");
@@ -37,37 +37,35 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  const savedUser = JSON.parse(
-    localStorage.getItem("ti_registered_user") || "null"
-  );
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
 
-  if (!savedUser) {
-    msg.style.color = "var(--accent)";
-    msg.textContent = "Nenhum usuário cadastrado. Crie uma conta primeiro.";
-    return;
-  }
-
-  if (email !== savedUser.email || password !== savedUser.password) {
-    msg.style.color = "var(--accent)";
-    msg.textContent = "E-mail ou senha incorretos.";
-    return;
-  }
-
-  const data = {
-    token: "demo-token",
-    user: {
-      name: savedUser.name,
-      role: savedUser.role
+    if (!res.ok) {
+      msg.style.color = "var(--accent)";
+      msg.textContent = "E-mail ou senha incorretos.";
+      return;
     }
-  };
 
-  localStorage.setItem("ti_token", data.token);
-  localStorage.setItem("ti_user", JSON.stringify(data.user));
+    const data = await res.json();
+    localStorage.setItem("ti_token", data.token);
 
-  msg.style.color = "var(--primary)";
-  msg.textContent = "Login realizado com sucesso!";
+    const savedUser = JSON.parse(localStorage.getItem("ti_registered_user") || "null");
+    const user = data.user || savedUser || { name: "Usuário", role: "Membro" };
+    localStorage.setItem("ti_user", JSON.stringify(user));
 
-  setTimeout(() => {
-    window.location.href = "../tela%202/index.html";
-  }, 600);
+    msg.style.color = "var(--primary)";
+    msg.textContent = "Login realizado com sucesso!";
+
+    setTimeout(() => {
+      window.location.href = "../tela%202/index.html";
+    }, 600);
+  } catch (error) {
+    console.error("Erro no login:", error);
+    msg.style.color = "var(--accent)";
+    msg.textContent = "Não foi possível conectar ao servidor. Tente novamente.";
+  }
 });

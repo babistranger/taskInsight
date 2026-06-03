@@ -60,7 +60,7 @@ A aplicação é desenhada para execução **local no sistema operacional** (Win
 │ CAMADA 2 — APLICAÇÃO (API REST)                              │
 │ Python 3.11 + Flask + Flask-CORS                             │
 │ PyJWT (HS256) · bcrypt · regras de negócio                   │
-│ Porta 5000                                                   │
+│ Porta 3000                                                   │
 └─────────────────────────┬────────────────────────────────────┘
                           │ PyMongo (driver oficial)
 ┌─────────────────────────▼────────────────────────────────────┐
@@ -165,7 +165,7 @@ mongod --dbpath ./data
 
 # API
 pip install -r api/requirements.txt
-cd api && python app.py            # http://localhost:5000
+cd api && python app.py            # http://localhost:3000
 
 # Frontend
 cd frontend && python -m http.server 8080   # http://localhost:8080
