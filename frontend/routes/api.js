@@ -1,4 +1,4 @@
-const API_URL = window.API_URL || "http://localhost:5000";
+const API_URL = window.API_URL || "http://localhost:3000";
 
 function token() { return localStorage.getItem("ti_token"); }
 function setSession(t, u) {

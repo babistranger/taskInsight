@@ -14,7 +14,7 @@ Aplicação web de produtividade em **arquitetura 3 camadas**, executável no si
 ┌──────────────────────────▼──────────────────────────────────┐
 │  CAMADA DE APLICAÇÃO (API REST)                             │
 │  Python + Flask + PyJWT + bcrypt                            │
-│  Porta 5000                                                 │
+│  Porta 3000                                                 │
 │  - Autenticação JWT (login/registro/refresh)                │
 │  - CRUD de tarefas, categorias                              │
 │  - Endpoints de métricas para o dashboard                   │
@@ -47,7 +47,7 @@ Pré-requisitos: Python 3.11+, MongoDB rodando em `mongodb://localhost:27017`.
 pip install -r api/requirements.txt
 pip install -r dashboard/requirements.txt
 
-# 2. API (porta 5000)
+# 2. API (porta 3000)
 cd api && python app.py
 
 # 3. Frontend (porta 8080)

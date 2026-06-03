@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-API_URL = os.getenv("API_URL", "http://localhost:5000")
+API_URL = os.getenv("API_URL", "http://localhost:3000")
 
 st.set_page_config(page_title="TaskInsight • Analytics", page_icon="📊", layout="wide")
 

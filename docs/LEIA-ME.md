@@ -18,7 +18,7 @@ tela 2/            -> Dashboard de Analytics  (GET /analytics/overview)
 Em **todos** os arquivos `script.js` existe no topo:
 
 ```js
-const API_BASE = "https://api.taskinsight.example.com";
+const API_BASE = "http://localhost:3000";
 ```
 
 Troque essa constante pela URL real do seu back-end. Ex.:

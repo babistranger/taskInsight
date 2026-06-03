@@ -8,7 +8,7 @@
    ============================================================ */
 
 // >>> TROCAR pela URL real do back-end <<<
-const API_BASE = "https://api.taskinsight.example.com";
+const API_BASE = "http://localhost:3000";
 
 /* ---- Toggle mostrar/esconder senha (somente UI) ---- */
 const toggle = document.getElementById("togglePass");
@@ -28,15 +28,12 @@ form.addEventListener("submit", async (e) => {
   msg.style.color = "var(--muted)";
   msg.textContent = "Criando conta...";
 
-  // Monta o payload com os dados do formulário
-  // -> Mesmos nomes esperados pelo back-end no endpoint /auth/register
   const payload = {
     name: form.name.value.trim(),
     email: form.email.value.trim(),
     password: form.password.value
   };
 
-  // Validação simples (a API deve revalidar)
   if (!payload.name || !payload.email || payload.password.length < 6) {
     msg.style.color = "var(--accent)";
     msg.textContent = "Preencha todos os campos corretamente.";
@@ -44,42 +41,34 @@ form.addEventListener("submit", async (e) => {
   }
 
   try {
-    /* ===== CHAMADA À API =====
-       Endpoint: POST {API_BASE}/auth/register
-       Body:     payload (JSON com name, email, password)
-       ============================ */
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    }).catch(() => null);
+    });
 
-    let data;
-    if (res && res.ok) {
-      // ✅ Resposta real
-      // Esperado: { token: string, user: { name: string, role: string } }
-      data = await res.json();
-    } else {
-      // ⚠️ Fallback MOCK quando API ainda não está pronta — remover depois
-      data = { token: "demo-token", user: { name: payload.name, role: "Novo Membro" } };
+    if (!res.ok) {
+      const errorText = await res.text();
+      msg.style.color = "var(--accent)";
+      msg.textContent = errorText || "Não foi possível criar a conta.";
+      return;
     }
 
-    /* ===== Persistência ===== */
     const registeredUser = {
-  name: payload.name,
-  email: payload.email,
-  password: payload.password,
-  role: "Novo Membro"
-};
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+      role: "Novo Membro"
+    };
 
-localStorage.setItem("ti_registered_user", JSON.stringify(registeredUser));
+    localStorage.setItem("ti_registered_user", JSON.stringify(registeredUser));
 
-msg.style.color = "var(--primary)";
-msg.textContent = "Conta criada com sucesso! Vá para o login.";
+    msg.style.color = "var(--primary)";
+    msg.textContent = "Conta criada com sucesso! Vá para o login.";
 
-setTimeout(() => {
-  window.location.href = "../login/index.html";
-}, 800);
+    setTimeout(() => {
+      window.location.href = "../login/index.html";
+    }, 800);
   } catch (error) {
     console.error("Erro ao criar conta:", error);
     msg.style.color = "var(--accent)";
