@@ -14,7 +14,7 @@ async function api(path, opts = {}) {
   
   const res = await fetch(`${API_URL}${path}`, { ...opts, headers });
   if (res.status === 401) { logout(); throw new Error("unauthorized"); }
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "request_error");
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).erro || "request_error");
   if (res.status === 204) return null;
   return res.json();
 }

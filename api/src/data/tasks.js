@@ -1,4 +1,4 @@
-const tasks = [
+/*const tasks = [
   {
     id: 1,
     title: "Estudar JWT",
@@ -7,4 +7,4 @@ const tasks = [
   }
 ];
 
-module.exports = tasks;
+//module.exports = tasks; */
