@@ -1,17 +1,6 @@
-/* ============================================================
-   TELA DE LOGIN — integração com Back-end
-   ------------------------------------------------------------
-   Endpoint principal: POST {API_BASE}/auth/login
-   Body enviado:       { email, password }
-   Resposta esperada:  { token: "<jwt>", user: { name, role } }
-   Após sucesso:       salva token + user no localStorage e
-                       redireciona para a tela 2 (dashboard).
-   ============================================================ */
-
-// >>> TROCAR pela URL real do back-end <<<
 const API_BASE = "http://localhost:3000";
 
-/* ---- UI: botão "olho" mostrar/esconder senha (não envolve API) ---- */
+/* ---- Toggle mostrar/esconder senha ---- */
 const toggle = document.getElementById("togglePass");
 const passInput = document.getElementById("password");
 toggle.addEventListener("click", () => {
@@ -22,40 +11,38 @@ toggle.addEventListener("click", () => {
 
 /* ---- Submit do formulário de login ---- */
 const form = document.getElementById("loginForm");
-const msg = document.getElementById("msg");   // <p id="msg"> usado para feedback
+const msg  = document.getElementById("msg");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   msg.textContent = "";
 
   const email = form.email.value.trim();
-  const password = form.password.value;
+  const senha = form.password.value;
 
-  if (!email || !password) {
+  if (!email || !senha) {
     msg.style.color = "var(--accent)";
     msg.textContent = "Preencha e-mail e senha.";
     return;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, senha })
     });
+
+    const data = await res.json();
 
     if (!res.ok) {
       msg.style.color = "var(--accent)";
-      msg.textContent = "E-mail ou senha incorretos.";
+      msg.textContent = data.erro || "E-mail ou senha incorretos.";
       return;
     }
 
-    const data = await res.json();
     localStorage.setItem("ti_token", data.token);
-
-    const savedUser = JSON.parse(localStorage.getItem("ti_registered_user") || "null");
-    const user = data.user || savedUser || { name: "Usuário", role: "Membro" };
-    localStorage.setItem("ti_user", JSON.stringify(user));
+    localStorage.setItem("ti_user", JSON.stringify(data.usuario));
 
     msg.style.color = "var(--primary)";
     msg.textContent = "Login realizado com sucesso!";
@@ -66,6 +53,6 @@ form.addEventListener("submit", async (e) => {
   } catch (error) {
     console.error("Erro no login:", error);
     msg.style.color = "var(--accent)";
-    msg.textContent = "Não foi possível conectar ao servidor. Tente novamente.";
+    msg.textContent = "Não foi possível conectar ao servidor.";
   }
 });

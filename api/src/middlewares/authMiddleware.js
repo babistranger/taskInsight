@@ -1,34 +1,25 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
+const User = require('../models/user');
 
-module.exports = (req, res, next) => {
+const proteger = async (req, res, next) => {
+  const auth = req.headers.authorization;
 
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      message: "Token não enviado"
-    });
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ erro: 'Não autenticado. Token ausente.' });
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = auth.split(' ')[1];
 
   try {
-
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
-
-    req.user = decoded;
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.usuario = await User.findById(decoded.id);
+    if (!req.usuario) {
+      return res.status(401).json({ erro: 'Usuário não encontrado.' });
+    }
     next();
-
-  } catch (error) {
-
-    return res.status(401).json({
-      message: "Token inválido"
-    });
-
+  } catch {
+    return res.status(401).json({ erro: 'Token inválido ou expirado.' });
   }
-
 };
+
+module.exports = { proteger };

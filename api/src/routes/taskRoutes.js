@@ -1,33 +1,27 @@
-const express = require("express");
+const express = require('express');
+const {
+  listarTarefas,
+  buscarTarefa,
+  criarTarefa,
+  atualizarTarefa,
+  atualizarStatus,
+  deletarTarefa,
+  getResumoAnalytics,
+} = require('../controllers/taskController');
+const { proteger } = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
-const authMiddleware = require("../middlewares/authMiddleware");
+router.use(proteger);
 
-const taskController = require("../controllers/taskController");
+// Rota específica antes de /:id para evitar ambiguidade
+router.get('/analytics/resumo', getResumoAnalytics);
 
-router.get(
-  "/",
-  authMiddleware,
-  taskController.getTasks
-);
-
-router.post(
-  "/",
-  authMiddleware,
-  taskController.createTask
-);
-
-router.put(
-  "/:id",
-  authMiddleware,
-  taskController.updateTask
-);
-
-router.delete(
-  "/:id",
-  authMiddleware,
-  taskController.deleteTask
-);
+router.get('/', listarTarefas);
+router.get('/:id', buscarTarefa);
+router.post('/', criarTarefa);
+router.patch('/:id/status', atualizarStatus);
+router.patch('/:id', atualizarTarefa);
+router.delete('/:id', deletarTarefa);
 
 module.exports = router;
