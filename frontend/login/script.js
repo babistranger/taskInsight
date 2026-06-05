@@ -48,7 +48,7 @@ form.addEventListener("submit", async (e) => {
     msg.textContent = "Login realizado com sucesso!";
 
     setTimeout(() => {
-      window.location.href = "../tela%202/index.html";
+      window.location.href = "../tela%201/index.html";
     }, 600);
   } catch (error) {
     console.error("Erro no login:", error);
