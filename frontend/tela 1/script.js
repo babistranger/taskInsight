@@ -81,6 +81,7 @@ function renderBoard(tasks) {
 
     const wrap = document.createElement("div");
     wrap.className = "column";
+    wrap.dataset.id = col.id;
     wrap.innerHTML = `
       <div class="col-head">
         <span class="dot" style="background:${col.color}"></span>
@@ -91,6 +92,7 @@ function renderBoard(tasks) {
     `;
     board.appendChild(wrap);
   });
+  start();
 }
 
 /* ============================================================
@@ -119,7 +121,7 @@ function renderCard(t) {
   const pin = t.pinned ? `<i class="lucide lucide-pin" style="color:var(--muted);font-size:14px;margin-left:auto"></i>` : "";
 
   return `
-    <article class="card-task" data-id="${t.id}">
+    <article class="card-task" draggable="true" data-id="${t.id}">
       <div style="display:flex;align-items:center;gap:8px">
         <span class="tag ${tagClass}">${tagLabel}</span>
         ${pin}
@@ -134,6 +136,65 @@ function renderCard(t) {
   `;
 }
 
+function start() {
+  const tasks = document.querySelectorAll('.card-task');
+  const columns = document.querySelectorAll('.column');
+
+  tasks.forEach(task => {
+    task.addEventListener('dragstart', (e) => {
+      task.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', task.dataset.id);
+    });
+
+    task.addEventListener('dragend', () => {
+      task.classList.remove('dragging');
+    });
+  });
+
+  columns.forEach(column => {
+    column.addEventListener('dragover', e => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(column, e.clientY);
+      const draggable = document.querySelector('.dragging');
+      if (afterElement == null) {
+        column.appendChild(draggable);
+      } else {
+        column.insertBefore(draggable, afterElement);
+      }
+    });
+
+    column.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const taskId = e.dataTransfer.getData('text/plain');
+      const newStatus = column.dataset.id;
+      updateTaskStatus(parseInt(taskId), newStatus);
+    });
+  });
+}
+
+function getDragAfterElement(column, y) {
+  const draggableElements = [...column.querySelectorAll('.card-task:not(.dragging)')];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateTaskStatus(taskId, newStatus) {
+  const task = MOCK_TASKS.find(t => t.id === taskId);
+  if (task) {
+    task.status = newStatus;
+    renderBoard(MOCK_TASKS);
+  }
+}
+
+
 /* ============================================================
    Guard de rota: se não houver token salvo (usuário não logado),
    redireciona para a tela de login.
@@ -145,8 +206,8 @@ function renderCard(t) {
 
   const u = JSON.parse(localStorage.getItem("ti_user") || "{}");
   // Preenche o sidebar com os dados do usuário vindos da API
-  if (u.name) document.getElementById("userName").textContent = u.name;
-  if (u.role) document.getElementById("userRole").textContent = u.role;
+  if (u.nome) document.getElementById("userName").textContent = u.nome;
+  // A propriedade 'role' não é retornada pela API, então o campo no HTML ficará vazio.
 })();
 
 // Carrega as tarefas (API ou mock) e renderiza

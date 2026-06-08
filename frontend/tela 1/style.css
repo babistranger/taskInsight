@@ -118,6 +118,10 @@ button { font-family: inherit; }
   transition: transform .12s, box-shadow .12s;
 }
 .card-task:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.dragging {
+  opacity: .5;
+  box-shadow: 0 0 10px rgba(0,0,0,.5);
+}
 .tag {
   align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: .5px;
   padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
