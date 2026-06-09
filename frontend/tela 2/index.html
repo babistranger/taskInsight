@@ -165,14 +165,14 @@
             </div>
           </div>
 
-          <!-- Card "Distribuição Diária"
+          <!-- Card "Distribuição Mensal"
                <canvas id="distChart"> é renderizado pelo Chart.js usando
                data.distribution = { labels, completed, allocated } -->
           <div class="card">
             <div class="card-h">
               <div>
-                <h3>Distribuição Diária</h3>
-                <p class="muted">Frequência de atividades por categoria</p>
+                <h3>Distribuição Mensal</h3>
+                <p class="muted">Tempo gasto por área no mês atual</p>
               </div>
               <button class="icon-btn"><i data-lucide="filter"></i></button>
             </div>
@@ -189,7 +189,7 @@
 
   <!-- Chart.js (gráfico de barras) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Lógica + chamada de API -->
+  <script src="../routes/api.js"></script>
   <script src="script.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>

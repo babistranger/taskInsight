@@ -204,6 +204,23 @@ const getResumoAnalytics = async (req, res) => {
       { $group: { _id: null, total: { $sum: '$tempo_gasto' } } },
     ]);
 
+    // Tempo por categoria no mês atual
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+
+    const porCategoriaMes = await Task.aggregate([
+      { $match: { usuario: userId, createdAt: { $gte: inicioMes } } },
+      {
+        $group: {
+          _id: '$categoria',
+          count: { $sum: 1 },
+          tempo_total: { $sum: '$tempo_gasto' },
+        },
+      },
+      { $sort: { tempo_total: -1 } },
+    ]);
+
     res.json({
       progresso: total > 0 ? Math.round((concluidas / total) * 100) : 0,
       total,
@@ -211,6 +228,7 @@ const getResumoAnalytics = async (req, res) => {
       por_status: porStatus,
       por_categoria: porCategoria,
       por_prioridade: porPrioridade,
+      por_categoria_mes: porCategoriaMes,
       proximas_entregas,
       carga_semanal: carga_semanal[0]?.total ?? 0,
     });

@@ -1,33 +1,9 @@
-/* ============================================================
-   TELA 2 — DASHBOARD DE ANALYTICS
-   ------------------------------------------------------------
-   Endpoint principal:
-     GET {API_BASE}/analytics/overview
-     Header: Authorization: Bearer <ti_token>
+/* Guard + dados do usuário no sidebar */
+requireAuth();
+const u = user();
+if (u?.nome) document.getElementById("userName").textContent = u.nome;
 
-   Formato esperado da resposta:
-   {
-     progress: 84,                              // % geral (number 0-100)
-     deliveries: [                              // lista de "Minhas Entregas"
-       { title, sub, badge, cls }               // cls = badge-hoje | badge-amanha | badge-sexta
-     ],
-     timeArea: [                                // barras "Tempo por Área"
-       { label, value, color }                  // value em horas; color = CSS color
-     ],
-     distribution: {                            // gráfico Chart.js
-       labels:    ["Código","Cursos",...],
-       completed: [62,18,38,12],                // barras azuis
-       allocated: [80,20,40,15]                 // barras laranja
-     }
-   }
-   ============================================================ */
-
-// >>> TROCAR pela URL real do back-end <<<
-const API_BASE = "http://localhost:3000";
-
-/* ---------- MOCK fallback ----------
-   Espelha exatamente o contrato esperado da API. Usado quando
-   /analytics/overview falha (offline / não implementado). ----- */
+/* ---------- MOCK fallback ---------- */
 const MOCK = {
   progress: 84,
   deliveries: [
@@ -42,109 +18,106 @@ const MOCK = {
     { label: "Outras Demandas",     value: 15, color: "#c9b89c" }
   ],
   distribution: {
-    labels:    ["Código", "Cursos", "Debug", "Outras"],
-    completed: [62, 18, 38, 12],
-    allocated: [80, 20, 40, 15]
+    labels:    ["Escrevendo Código", "Cursos", "Debugging", "Outras Demandas"],
+    completed: [8, 3, 5, 2],
+    allocated: [24, 6, 12, 4]
   }
 };
 
 /* ============================================================
-   Guard de rota + preencher dados do usuário no sidebar.
-   - ti_token  -> obrigatório (senão volta para login)
-   - ti_user   -> { name, role } salvo no login
-   ============================================================ */
-(function guard() {
-  const token = localStorage.getItem("ti_token");
-  if (!token) { window.location.href = "../login/index.html"; return; }
-
-  const u = JSON.parse(localStorage.getItem("ti_user") || "{}");
-  if (u.name) document.getElementById("userName").textContent = u.name;
-  if (u.role) document.getElementById("userRole").textContent = u.role;
-})();
-
-/* ============================================================
    fetchAnalytics()
-   Chama GET /analytics/overview. Em caso de falha, devolve MOCK.
+   Tenta GET /api/tasks/analytics/resumo via wrapper api()
+   (trata 401 → redireciona para login automaticamente).
+   Em caso de qualquer outro erro, devolve o MOCK.
    ============================================================ */
 async function fetchAnalytics() {
   try {
-    const token = localStorage.getItem("ti_token");
-    const res = await fetch(`${API_BASE}/analytics/overview`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error();
-    return await res.json(); // deve seguir o formato documentado acima
+    return await api("/api/tasks/analytics/resumo");
   } catch {
-    return MOCK; // ⚠️ remover quando API estiver pronta
+    return null; // cai no MOCK abaixo
   }
 }
 
-/* ============================================================
-   renderDeliveries(list)
-   list = data.deliveries (array de { title, sub, badge, cls })
-   Preenche o <ul id="deliveries"> com os itens vindos da API.
-   ============================================================ */
+function transformar(data) {
+  if (!data || !data.total) return MOCK;
+
+  const hoje = new Date();
+  const cores = {
+    "Escrevendo Código": "var(--accent)",
+    "Cursos":            "var(--primary)",
+    "Debugging":         "var(--accent)",
+    "Outras Demandas":   "#c9b89c",
+  };
+
+  const deliveries = (data.proximas_entregas || []).map((t) => {
+    const diff = t.data_limite
+      ? Math.ceil((new Date(t.data_limite) - hoje) / 86400000)
+      : null;
+    const badge = diff === null ? "Sem prazo" : diff <= 0 ? "Hoje" : diff === 1 ? "Amanhã" : `${diff} dias`;
+    const cls   = diff === null || diff > 1 ? "badge-sexta" : diff <= 0 ? "badge-hoje" : "badge-amanha";
+    return { title: t.tarefa, sub: `Prioridade: ${t.prioridade}`, badge, cls };
+  });
+
+  const timeArea = (data.por_categoria || []).map((c) => ({
+    label: c._id || "Outros",
+    value: c.tempo_total || 0,
+    color: cores[c._id] || "var(--accent)",
+  }));
+
+  const labels    = (data.por_categoria_mes || []).map((c) => c._id || 'Outros');
+  const completed = (data.por_categoria_mes || []).map((c) => c.count || 0);
+  const allocated = (data.por_categoria_mes || []).map((c) => c.tempo_total || 0);
+
+  return {
+    progress:     data.progresso || 0,
+    deliveries:   deliveries.length ? deliveries : MOCK.deliveries,
+    timeArea:     timeArea.length   ? timeArea   : MOCK.timeArea,
+    distribution: labels.length     ? { labels, completed, allocated } : MOCK.distribution,
+  };
+}
+
+/* ============================================================ Renders ============================================================ */
+function renderProgress(pct) {
+  document.getElementById("progressPct").textContent = pct + "%";
+  document.getElementById("progressBar").style.width  = pct + "%";
+}
+
 function renderDeliveries(list) {
-  const ul = document.getElementById("deliveries");
-  ul.innerHTML = list.map((d) => `
+  document.getElementById("deliveries").innerHTML = list.map((d) => `
     <li>
       <div>
-        <div class="d-title">${d.title}</div>   <!-- d.title -->
-        <div class="d-sub">${d.sub}</div>       <!-- d.sub   -->
+        <div class="d-title">${d.title}</div>
+        <div class="d-sub">${d.sub}</div>
       </div>
-      <span class="badge ${d.cls}">${d.badge}</span> <!-- d.cls / d.badge -->
+      <span class="badge ${d.cls}">${d.badge}</span>
     </li>
   `).join("");
 }
 
-/* ============================================================
-   renderTimeArea(items)
-   items = data.timeArea (array de { label, value, color })
-   Gera barras horizontais dentro de <div id="timeArea">.
-   ============================================================ */
 function renderTimeArea(items) {
-  const max = Math.max(...items.map((i) => i.value));
+  const max = Math.max(...items.map((i) => i.value), 1);
   document.getElementById("timeArea").innerHTML = items.map((it) => `
     <div class="bar-item">
       <div class="bar-label">
-        <span>${it.label}</span>      <!-- it.label -->
-        <strong>${it.value}h</strong> <!-- it.value (em horas) -->
+        <span>${it.label}</span>
+        <strong>${it.value}h</strong>
       </div>
       <div class="bar-track">
-        <!-- it.value normalizado pelo máximo + it.color do CSS -->
         <div class="bar-fill" style="width:${(it.value / max) * 100}%; background:${it.color}"></div>
       </div>
     </div>
   `).join("");
 }
 
-/* ============================================================
-   renderProgress(pct)
-   pct = data.progress (0-100)
-   Atualiza o número grande e a largura da barra de progresso.
-   ============================================================ */
-function renderProgress(pct) {
-  document.getElementById("progressPct").textContent = pct + "%"; // <span id="progressPct">
-  document.getElementById("progressBar").style.width = pct + "%"; // <div  id="progressBar">
-}
-
-/* ============================================================
-   renderChart(d)
-   d = data.distribution { labels, completed, allocated }
-   Renderiza o gráfico de barras no <canvas id="distChart">.
-   ============================================================ */
 function renderChart(d) {
-  const ctx = document.getElementById("distChart");
-  new Chart(ctx, {
+  new Chart(document.getElementById("distChart"), {
     type: "bar",
     data: {
-      labels: d.labels, // eixo X (categorias vindas da API)
+      labels: d.labels,
       datasets: [
-        // 1ª série -> tarefas completas (azul claro)
-        { label: "Tarefas Completas", data: d.completed, backgroundColor: "#b8cdea", borderRadius: 6 },
-        // 2ª série -> tempo alocado (laranja)
-        { label: "Tempo Alocado",     data: d.allocated, backgroundColor: "#e89547", borderRadius: 6 }
-      ]
+        { label: "Tarefas", data: d.completed, backgroundColor: "#b8cdea", borderRadius: 6 },
+        { label: "Horas",   data: d.allocated, backgroundColor: "#e89547", borderRadius: 6 },
+      ],
     },
     options: {
       responsive: true,
@@ -152,27 +125,23 @@ function renderChart(d) {
       plugins: { legend: { display: false } },
       scales: {
         y: { beginAtZero: true, grid: { color: "#efe9dc" }, ticks: { color: "#6b7388" } },
-        x: { grid: { display: false }, ticks: { color: "#6b7388" } }
-      }
-    }
+        x: { grid: { display: false }, ticks: { color: "#6b7388" } },
+      },
+    },
   });
 }
 
-/* ============================================================
-   Bootstrap da tela: busca os dados e renderiza tudo.
-   Se quiser auto-refresh, envolver em setInterval(... , 60000).
-   ============================================================ */
-fetchAnalytics().then((data) => {
-  renderProgress(data.progress);          // <- data.progress
-  renderDeliveries(data.deliveries);      // <- data.deliveries
-  renderTimeArea(data.timeArea);          // <- data.timeArea
-  renderChart(data.distribution);         // <- data.distribution
-});
+/* Bootstrap */
+fetchAnalytics()
+  .then(transformar)
+  .then((data) => {
+    renderProgress(data.progress);
+    renderDeliveries(data.deliveries);
+    renderTimeArea(data.timeArea);
+    renderChart(data.distribution);
+  });
 
-/* ============================================================
-   Botão "Nova Tarefa" do sidebar (.btn-accent) leva para a tela 1.
-   Pode futuramente abrir um modal direto e chamar POST /tasks.
-   ============================================================ */
+/* Botão "Nova Tarefa" → tela 1 */
 document.querySelectorAll(".btn-accent").forEach((b) =>
-  b.addEventListener("click", () => (window.location.href = "../tela%201/index.html"))
+  b.addEventListener("click", () => (location.href = "/tela%201/"))
 );

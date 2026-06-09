@@ -1,7 +1,7 @@
 function bindLogin(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const err = document.getElementById("err"); err.textContent = "";
+    const err = document.getElementById("err") || document.getElementById("msg"); err.textContent = "";
     try {
       const data = await api("/api/auth/login", {
         method: "POST",
@@ -11,7 +11,7 @@ function bindLogin(form) {
         }),
       });
       setSession(data.token, data.usuario);
-      location.href = "app.html";
+      location.href = "/tela%201/";
     } catch (e) { err.textContent = "E-mail ou senha inválidos."; }
   });
 }
@@ -27,7 +27,7 @@ function validarSenha(senha) {
 function bindRegister(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const err = document.getElementById("err"); err.textContent = "";
+    const err = document.getElementById("err") || document.getElementById("msg"); err.textContent = "";
     const erroSenha = validarSenha(form.password.value);
     if (erroSenha) { err.textContent = erroSenha; return; }
     try {
@@ -40,7 +40,7 @@ function bindRegister(form) {
         }),
       });
       setSession(data.token, data.usuario);
-      location.href = "app.html";
+      location.href = "/login/";
     } catch (e) {
       err.textContent = e.message === "E-mail já cadastrado." ? "Este e-mail já está em uso." : "Não foi possível cadastrar.";
     }
