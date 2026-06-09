@@ -8,9 +8,9 @@
   <!-- ============================================================
        TELA 1 — QUADRO KANBAN DE TAREFAS
        Back-end relacionado:
-         GET  {API_BASE}/tasks          -> lista de tarefas (renderiza colunas)
-         POST {API_BASE}/tasks          -> criar nova tarefa (FAB / botão "Nova Tarefa")
-         PUT  {API_BASE}/tasks/:id      -> mover tarefa entre colunas (futuro)
+         GET  {API_BASE}/api/tasks          -> lista de tarefas (renderiza colunas)
+         POST {API_BASE}/api/tasks          -> criar nova tarefa (próxima etapa)
+         PATCH {API_BASE}/api/tasks/:id/status -> mover tarefa entre colunas
 
        Header Authorization: Bearer <ti_token>
        ============================================================ -->
@@ -31,12 +31,12 @@
 
       <!-- Menu de navegação (estático; links internos do front) -->
       <nav class="sb-nav">
-        <div class="nav-group">
-          <a href="#" class="nav-item active">
+        <div class="nav-group open">
+          <button class="nav-item active nav-toggle" type="button" aria-expanded="true" aria-controls="dashboardSubmenu">
             <i data-lucide="layout-dashboard"></i> Dashboard
             <i data-lucide="chevron-down" class="chev"></i>
-          </a>
-          <div class="sub">
+          </button>
+          <div class="sub" id="dashboardSubmenu">
             <a href="index.html" class="sub-item active">Quadro de Tarefas</a>
             <a href="../tela%202/index.html" class="sub-item">Analytics</a>
           </div>
@@ -49,7 +49,7 @@
 
       <!-- Rodapé do sidebar -->
       <div class="sb-footer">
-        <!-- Botão "Nova Tarefa" -> dispara modal/POST /tasks (ver script.js) -->
+        <!-- Botão "Nova Tarefa" -> dispara modal/POST /api/tasks (ver script.js) -->
         <button class="btn btn-accent btn-block"><i data-lucide="plus"></i> Nova Tarefa</button>
 
         <!-- Card do usuário logado
@@ -65,6 +65,10 @@
             <small id="userRole">Desenvolvedor FrontEnd</small>
           </div>
         </div>
+
+        <button id="logoutButton" class="btn btn-logout btn-block" type="button">
+          <i data-lucide="log-out"></i> Sair
+        </button>
       </div>
     </aside>
 
@@ -75,7 +79,7 @@
       <header class="topbar">
         <div class="search">
           <i data-lucide="search"></i>
-          <!-- Futuro: ao digitar, pode chamar GET /tasks?q=... -->
+          <!-- Futuro: ao digitar, pode chamar GET /api/tasks?q=... -->
           <input type="search" placeholder="Pesquisar tarefas..." />
         </div>
         <div class="top-actions">
@@ -87,18 +91,18 @@
       <section class="content">
         <div class="page-head">
           <h2>Quadro de Tarefas</h2>
-          <!-- Futuro: abrir painel de filtros e chamar GET /tasks?status=...&priority=... -->
+          <!-- Futuro: abrir painel de filtros e chamar GET /api/tasks?status=...&prioridade=... -->
           <button class="btn btn-outline"><i data-lucide="sliders-horizontal"></i> Filtrar</button>
         </div>
 
         <!-- ⭐ Container onde o KANBAN é renderizado dinamicamente.
              O script.js -> renderBoard() preenche este elemento usando os
-             dados de GET /tasks. Cada tarefa vira um <article class="card-task">.
+             dados de GET /api/tasks. Cada tarefa vira um <article class="card-task">.
         -->
         <div id="board" class="board"></div>
       </section>
 
-      <!-- Botão flutuante (FAB) para criar tarefa rapidamente -> POST /tasks -->
+      <!-- Botão flutuante (FAB) para criar tarefa rapidamente -> POST /api/tasks -->
       <button class="fab" aria-label="Adicionar tarefa"><i data-lucide="plus"></i></button>
     </main>
   </div>
