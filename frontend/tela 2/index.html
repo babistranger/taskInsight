@@ -31,12 +31,12 @@
       </div>
 
       <nav class="sb-nav">
-        <div class="nav-group">
-          <a href="#" class="nav-item active">
+        <div class="nav-group open">
+          <button class="nav-item active nav-toggle" type="button" aria-expanded="true" aria-controls="dashboardSubmenu">
             <i data-lucide="layout-dashboard"></i> Dashboard
             <i data-lucide="chevron-down" class="chev"></i>
-          </a>
-          <div class="sub">
+          </button>
+          <div class="sub" id="dashboardSubmenu">
             <a href="../tela%201/index.html" class="sub-item">Quadro de Tarefas</a>
             <a href="index.html" class="sub-item active">Analytics</a>
           </div>
@@ -59,6 +59,10 @@
             <small id="userRole">Desenvolvedor FullStack</small>
           </div>
         </div>
+
+        <button id="logoutButton" class="btn btn-logout btn-block" type="button">
+          <i data-lucide="log-out"></i> Sair
+        </button>
       </div>
     </aside>
 

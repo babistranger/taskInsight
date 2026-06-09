@@ -53,14 +53,58 @@ const MOCK = {
    - ti_token  -> obrigatório (senão volta para login)
    - ti_user   -> { name, role } salvo no login
    ============================================================ */
-(function guard() {
+function redirectToLogin() {
+  window.location.replace("../login/index.html");
+}
+
+function ensureAuthenticated() {
   const token = localStorage.getItem("ti_token");
-  if (!token) { window.location.href = "../login/index.html"; return; }
+  if (!token) {
+    redirectToLogin();
+    return false;
+  }
+
+  return true;
+}
+
+(function guard() {
+  if (!ensureAuthenticated()) return;
 
   const u = JSON.parse(localStorage.getItem("ti_user") || "{}");
   if (u.name) document.getElementById("userName").textContent = u.name;
   if (u.role) document.getElementById("userRole").textContent = u.role;
 })();
+
+function setupLogout() {
+  const logoutButton = document.getElementById("logoutButton");
+  if (!logoutButton) return;
+
+  logoutButton.addEventListener("click", () => {
+    localStorage.removeItem("ti_token");
+    localStorage.removeItem("ti_user");
+    redirectToLogin();
+  });
+}
+
+setupLogout();
+
+function setupSidebarToggle() {
+  const toggle = document.querySelector(".nav-toggle");
+  const group = document.querySelector(".nav-group");
+
+  if (!toggle || !group) return;
+
+  toggle.addEventListener("click", () => {
+    const isOpen = group.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
+}
+
+setupSidebarToggle();
+
+window.addEventListener("pageshow", () => {
+  ensureAuthenticated();
+});
 
 /* ============================================================
    fetchAnalytics()
