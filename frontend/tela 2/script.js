@@ -26,8 +26,8 @@
 const API_BASE = "http://localhost:3000";
 
 /* ---------- MOCK fallback ----------
-   Espelha exatamente o contrato esperado da API. Usado quando
-   /analytics/overview falha (offline / não implementado). ----- */
+   Espelha exatamente o contrato esperado pelos renderers. Usado quando
+   GET /api/tasks/analytics/resumo falha (offline / sem token válido). ----- */
 const MOCK = {
   progress: 84,
   deliveries: [
@@ -47,6 +47,78 @@ const MOCK = {
     allocated: [80, 20, 40, 15]
   }
 };
+
+/* ---------- Mapeamentos categoria <-> exibição ---------- */
+const CATEGORIA_META = {
+  "Escrevendo Código": { label: "Escrita de Código",  color: "var(--accent)" },
+  "Cursos":            { label: "Cursos & Estudos",   color: "var(--primary)" },
+  "Debugging":         { label: "Debugging & Fixes",  color: "var(--accent)" },
+  "Outras Demandas":   { label: "Outras Demandas",    color: "#c9b89c" }
+};
+
+const STATUS_LABEL = {
+  a_fazer: "A Fazer",
+  em_progresso: "Em Progresso",
+  em_revisao: "Em Revisão",
+  concluido: "Concluído"
+};
+
+const PRIORIDADE_BADGE = { alta: "badge-hoje", media: "badge-amanha", baixa: "badge-sexta" };
+
+const PERIOD_TITLES = {
+  diario: "Distribuição Diária",
+  semanal: "Distribuição Semanal",
+  mensal: "Distribuição Mensal"
+};
+
+/* ============================================================
+   formatDeadline(dataISO)
+   Formata data_limite em texto curto (Hoje / Amanhã / dd/mm).
+   ============================================================ */
+function formatDeadline(dataISO) {
+  if (!dataISO) return "Sem prazo";
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const alvo = new Date(dataISO);
+  alvo.setHours(0, 0, 0, 0);
+
+  const diffDias = Math.round((alvo - hoje) / 86400000);
+
+  if (diffDias === 0) return "Hoje";
+  if (diffDias === 1) return "Amanhã";
+  return alvo.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+/* ============================================================
+   transformResumo(data)
+   Converte a resposta de GET /api/tasks/analytics/resumo no
+   formato esperado pelos renderers desta tela.
+   ============================================================ */
+function transformResumo(data) {
+  const timeArea = (data.por_categoria || [])
+    .map((item) => ({
+      label: CATEGORIA_META[item._id]?.label || item._id,
+      value: Math.round((item.tempo_total || 0) * 10) / 10,
+      color: CATEGORIA_META[item._id]?.color || "var(--primary)"
+    }))
+    .filter((item) => item.value > 0);
+
+  const deliveries = (data.proximas_entregas || []).map((tarefa) => ({
+    title: tarefa.tarefa,
+    sub: STATUS_LABEL[tarefa.status] || tarefa.status,
+    badge: formatDeadline(tarefa.data_limite),
+    cls: PRIORIDADE_BADGE[tarefa.prioridade] || "badge-amanha"
+  }));
+
+  return {
+    progress: data.progresso ?? 0,
+    deliveries,
+    timeArea,
+    distribution: data.distribuicao || { labels: [], completed: [], allocated: [] }
+  };
+}
 
 /* ============================================================
    Guard de rota + preencher dados do usuário no sidebar.
@@ -107,19 +179,22 @@ window.addEventListener("pageshow", () => {
 });
 
 /* ============================================================
-   fetchAnalytics()
-   Chama GET /analytics/overview. Em caso de falha, devolve MOCK.
+   fetchAnalytics(periodo)
+   Chama GET /api/tasks/analytics/resumo?periodo=diario|semanal|mensal
+   e converte a resposta para o formato esperado pelos renderers.
+   Em caso de falha, devolve MOCK.
    ============================================================ */
-async function fetchAnalytics() {
+async function fetchAnalytics(periodo = "semanal") {
   try {
     const token = localStorage.getItem("ti_token");
-    const res = await fetch(`${API_BASE}/analytics/overview`, {
+    const res = await fetch(`${API_BASE}/api/tasks/analytics/resumo?periodo=${periodo}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error();
-    return await res.json(); // deve seguir o formato documentado acima
+    const data = await res.json();
+    return transformResumo(data);
   } catch {
-    return MOCK; // ⚠️ remover quando API estiver pronta
+    return MOCK; //  fallback enquanto offline / sem token válido
   }
 }
 
@@ -147,6 +222,11 @@ function renderDeliveries(list) {
    Gera barras horizontais dentro de <div id="timeArea">.
    ============================================================ */
 function renderTimeArea(items) {
+  if (!items.length) {
+    document.getElementById("timeArea").innerHTML = `<p class="muted">Sem dados de tempo registrados ainda.</p>`;
+    return;
+  }
+
   const max = Math.max(...items.map((i) => i.value));
   document.getElementById("timeArea").innerHTML = items.map((it) => `
     <div class="bar-item">
@@ -177,9 +257,16 @@ function renderProgress(pct) {
    d = data.distribution { labels, completed, allocated }
    Renderiza o gráfico de barras no <canvas id="distChart">.
    ============================================================ */
+let distChartInstance = null;
+
 function renderChart(d) {
   const ctx = document.getElementById("distChart");
-  new Chart(ctx, {
+
+  if (distChartInstance) {
+    distChartInstance.destroy();
+  }
+
+  distChartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels: d.labels, // eixo X (categorias vindas da API)
@@ -203,15 +290,38 @@ function renderChart(d) {
 }
 
 /* ============================================================
+   setupDistFilter()
+   Liga o <select id="distPeriod"> à troca de período do gráfico
+   de distribuição. Atualiza o título e refaz a busca/render.
+   ============================================================ */
+function setupDistFilter() {
+  const select = document.getElementById("distPeriod");
+  const title = document.getElementById("distTitle");
+
+  if (!select) return;
+
+  select.addEventListener("change", async () => {
+    const periodo = select.value;
+
+    if (title) title.textContent = PERIOD_TITLES[periodo] || "Distribuição";
+
+    const data = await fetchAnalytics(periodo);
+    renderChart(data.distribution);
+  });
+}
+
+/* ============================================================
    Bootstrap da tela: busca os dados e renderiza tudo.
    Se quiser auto-refresh, envolver em setInterval(... , 60000).
    ============================================================ */
-fetchAnalytics().then((data) => {
+fetchAnalytics("semanal").then((data) => {
   renderProgress(data.progress);          // <- data.progress
   renderDeliveries(data.deliveries);      // <- data.deliveries
   renderTimeArea(data.timeArea);          // <- data.timeArea
   renderChart(data.distribution);         // <- data.distribution
 });
+
+setupDistFilter();
 
 /* ============================================================
    Botão "Nova Tarefa" do sidebar (.btn-accent) leva para a tela 1.

@@ -106,6 +106,18 @@
     </main>
   </div>
 
+  <!-- Popup de confirmação de exclusão de tarefa -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Excluir tarefa</h3>
+      <p>Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-outline" type="button">Cancelar</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger" type="button">Excluir</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Lógica do board + chamadas à API -->
   <script src="script.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>

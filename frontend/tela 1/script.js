@@ -92,6 +92,7 @@ function renderBoard(tasks) {
   });
 
   setupDragAndDrop();
+  setupDeleteButtons();
 }
 
 function renderCard(task) {
@@ -111,8 +112,17 @@ function renderCard(task) {
 
   return `
     <article class="card-task" data-id="${taskId}" draggable="true">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div class="card-top">
         <span class="tag ${tagClass}">${tagLabel}</span>
+        <button class="btn-delete" data-id="${taskId}" draggable="false" type="button" aria-label="Excluir tarefa" title="Excluir tarefa">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </button>
       </div>
       <h3>${escapeHtml(task.tarefa || "Tarefa sem título")}</h3>
       <p>${escapeHtml(task.descricao || "Sem descrição")}</p>
@@ -164,6 +174,73 @@ function setupDragAndDrop() {
       await moveTask(taskId, newStatus);
     });
   });
+}
+
+/* ============================================================
+   EXCLUSÃO DE TAREFA
+   Endpoint: DELETE {API_BASE}/api/tasks/:id
+   ============================================================ */
+
+let taskIdToDelete = null;
+
+function setupDeleteButtons() {
+  document.querySelectorAll(".btn-delete").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openDeleteModal(btn.dataset.id);
+    });
+  });
+}
+
+function openDeleteModal(taskId) {
+  taskIdToDelete = taskId;
+  document.getElementById("deleteModal")?.classList.add("active");
+}
+
+function closeDeleteModal() {
+  taskIdToDelete = null;
+  document.getElementById("deleteModal")?.classList.remove("active");
+}
+
+function setupDeleteModal() {
+  const modal = document.getElementById("deleteModal");
+  const cancelBtn = document.getElementById("cancelDeleteBtn");
+  const confirmBtn = document.getElementById("confirmDeleteBtn");
+
+  if (!modal || !cancelBtn || !confirmBtn) return;
+
+  cancelBtn.addEventListener("click", closeDeleteModal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeDeleteModal();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("active")) {
+      closeDeleteModal();
+    }
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    if (!taskIdToDelete) return;
+
+    confirmBtn.disabled = true;
+    try {
+      await deleteTask(taskIdToDelete);
+      closeDeleteModal();
+    } catch (error) {
+      alert(error.message || "Não foi possível excluir a tarefa.");
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
+}
+
+async function deleteTask(taskId) {
+  await apiRequest(`/api/tasks/${taskId}`, { method: "DELETE" });
+
+  currentTasks = currentTasks.filter((task) => (task._id || task.id) !== taskId);
+  renderBoard(currentTasks);
 }
 
 async function moveTask(taskId, newStatus) {
@@ -257,6 +334,7 @@ async function initBoard() {
 
   setupUserInfo();
   setupLogout();
+  setupDeleteModal();
   try {
     const tasks = await fetchTasks();
     renderBoard(tasks);

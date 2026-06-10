@@ -155,15 +155,54 @@ const deletarTarefa = async (req, res) => {
   }
 };
 
+// Categorias fixas do schema + rótulos curtos para gráficos
+const CATEGORIAS = ['Escrevendo Código', 'Cursos', 'Debugging', 'Outras Demandas'];
+const CATEGORIA_LABEL_CURTO = {
+  'Escrevendo Código': 'Código',
+  'Cursos': 'Cursos',
+  'Debugging': 'Debug',
+  'Outras Demandas': 'Outras',
+};
+
+// Calcula a data de início de um período (diario | semanal | mensal)
+const inicioDoPeriodo = (periodo) => {
+  const data = new Date();
+  data.setHours(0, 0, 0, 0);
+
+  if (periodo === 'mensal') {
+    data.setDate(1);
+  } else if (periodo === 'semanal') {
+    const diaSemana = data.getDay(); // 0 = domingo
+    const diff = diaSemana === 0 ? -6 : 1 - diaSemana; // volta até segunda-feira
+    data.setDate(data.getDate() + diff);
+  }
+  // 'diario' (ou qualquer outro valor) usa o início do dia atual
+
+  return data;
+};
+
 // ──────────────────────────────────────────────
 // GET /api/tasks/analytics/resumo
-// Dados agregados para o dashboard Python
+// Query params: periodo (diario | semanal | mensal) -> afeta "distribuicao"
+// Dados agregados para o dashboard
 // ──────────────────────────────────────────────
 const getResumoAnalytics = async (req, res) => {
   try {
     const userId = req.usuario._id;
 
-    const [total, concluidas, porStatus, porCategoria, porPrioridade] = await Promise.all([
+    const periodosValidos = ['diario', 'semanal', 'mensal'];
+    const periodo = periodosValidos.includes(req.query.periodo) ? req.query.periodo : 'semanal';
+    const inicioPeriodo = inicioDoPeriodo(periodo);
+
+    const [
+      total,
+      concluidas,
+      porStatus,
+      porCategoria,
+      porPrioridade,
+      completasPeriodo,
+      alocadoPeriodo,
+    ] = await Promise.all([
       Task.countDocuments({ usuario: userId }),
       Task.countDocuments({ usuario: userId, status: 'concluido' }),
 
@@ -187,6 +226,24 @@ const getResumoAnalytics = async (req, res) => {
         { $match: { usuario: userId } },
         { $group: { _id: '$prioridade', count: { $sum: 1 } } },
       ]),
+
+      // Tarefas concluídas dentro do período selecionado, por categoria
+      Task.aggregate([
+        {
+          $match: {
+            usuario: userId,
+            status: 'concluido',
+            updatedAt: { $gte: inicioPeriodo },
+          },
+        },
+        { $group: { _id: '$categoria', count: { $sum: 1 } } },
+      ]),
+
+      // Tempo alocado (tempo_gasto) em tarefas atualizadas dentro do período, por categoria
+      Task.aggregate([
+        { $match: { usuario: userId, updatedAt: { $gte: inicioPeriodo } } },
+        { $group: { _id: '$categoria', tempo_total: { $sum: '$tempo_gasto' } } },
+      ]),
     ]);
 
     const hoje = new Date();
@@ -204,6 +261,17 @@ const getResumoAnalytics = async (req, res) => {
       { $group: { _id: null, total: { $sum: '$tempo_gasto' } } },
     ]);
 
+    // Monta a distribuição por categoria no período selecionado
+    const mapCompletas = Object.fromEntries(completasPeriodo.map((i) => [i._id, i.count]));
+    const mapAlocado = Object.fromEntries(alocadoPeriodo.map((i) => [i._id, i.tempo_total]));
+
+    const distribuicao = {
+      periodo,
+      labels: CATEGORIAS.map((c) => CATEGORIA_LABEL_CURTO[c]),
+      completed: CATEGORIAS.map((c) => mapCompletas[c] || 0),
+      allocated: CATEGORIAS.map((c) => Math.round((mapAlocado[c] || 0) * 10) / 10),
+    };
+
     res.json({
       progresso: total > 0 ? Math.round((concluidas / total) * 100) : 0,
       total,
@@ -213,6 +281,7 @@ const getResumoAnalytics = async (req, res) => {
       por_prioridade: porPrioridade,
       proximas_entregas,
       carga_semanal: carga_semanal[0]?.total ?? 0,
+      distribuicao,
     });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao gerar analytics.', detalhe: err.message });

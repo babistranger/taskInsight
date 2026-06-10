@@ -168,16 +168,22 @@
             </div>
           </div>
 
-          <!-- Card "Distribuição Diária"
+          <!-- Card "Distribuição"
                <canvas id="distChart"> é renderizado pelo Chart.js usando
-               data.distribution = { labels, completed, allocated } -->
+               data.distribution = { labels, completed, allocated }
+               #distPeriod permite alternar entre diário, semanal e mensal,
+               refazendo GET /api/tasks/analytics/resumo?periodo=... -->
           <div class="card">
             <div class="card-h">
               <div>
-                <h3>Distribuição Diária</h3>
+                <h3 id="distTitle">Distribuição Semanal</h3>
                 <p class="muted">Frequência de atividades por categoria</p>
               </div>
-              <button class="icon-btn"><i data-lucide="filter"></i></button>
+              <select id="distPeriod" class="period-select" aria-label="Período da distribuição">
+                <option value="diario">Diária</option>
+                <option value="semanal" selected>Semanal</option>
+                <option value="mensal">Mensal</option>
+              </select>
             </div>
             <div class="chart-wrap"><canvas id="distChart"></canvas></div>
             <div class="legend center">

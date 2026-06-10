@@ -162,6 +162,16 @@ button { font-family: inherit; }
 .card-task.dragging { opacity: .72; transform: rotate(1deg) scale(1.02); box-shadow: var(--shadow); cursor: grabbing; }
 .board-updating { opacity: .78; pointer-events: none; }
 .board-message { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; color: var(--danger); box-shadow: var(--shadow-sm); }
+.card-top { display: flex; align-items: center; gap: 8px; }
+
+.btn-delete {
+  margin-left: auto; background: transparent; border: 0; cursor: pointer;
+  color: var(--muted); padding: 4px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.btn-delete:hover { background: #fde0dc; color: var(--danger); }
+
 .tag {
   align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: .5px;
   padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
@@ -187,6 +197,25 @@ button { font-family: inherit; }
 }
 .fab:hover { background: var(--accent-hover); }
 .fab:active { transform: scale(.96); }
+
+/* ===== Modal de confirmação ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(31,42,68,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  width: 360px; max-width: 90vw; box-shadow: var(--shadow); text-align: center;
+}
+.modal h3 { margin: 0 0 8px; font-size: 17px; }
+.modal p { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.modal-actions .btn { flex: 1; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #a9443a; }
+.btn-danger:disabled { opacity: .65; cursor: default; }
 
 /* ===== Responsivo ===== */
 @media (max-width: 1100px) {
