@@ -1,0 +1,138 @@
+{
+  "usuarios": [
+    {
+      "nome": "Ana Souza",
+      "email": "ana.souza@email.com",
+      "senha": "senha123456"
+    },
+    {
+      "nome": "Bruno Lima",
+      "email": "bruno.lima@email.com",
+      "senha": "senha123456"
+    },
+    {
+      "nome": "Carla Mendes",
+      "email": "carla.mendes@email.com",
+      "senha": "senha123456"
+    }
+  ],
+
+  "tarefas": [
+    {
+      "tarefa": "Implementar autenticação JWT",
+      "descricao": "Adicionar login e cadastro com geração de token JWT e middleware de proteção de rotas.",
+      "categoria": "Escrevendo Código",
+      "status": "concluido",
+      "prioridade": "alta",
+      "tempo_gasto": 4.5,
+      "data_limite": "2026-06-05T18:00:00.000Z"
+    },
+    {
+      "tarefa": "Corrigir bug no filtro de tarefas",
+      "descricao": "Filtro por status não está retornando tarefas em_revisao corretamente.",
+      "categoria": "Debugging",
+      "status": "em_progresso",
+      "prioridade": "alta",
+      "tempo_gasto": 1.0,
+      "data_limite": "2026-06-10T12:00:00.000Z"
+    },
+    {
+      "tarefa": "Curso Node.js avançado",
+      "descricao": "Completar os módulos 5 a 8 sobre streams e cluster.",
+      "categoria": "Cursos",
+      "status": "em_progresso",
+      "prioridade": "media",
+      "tempo_gasto": 3.0,
+      "data_limite": "2026-06-20T23:59:00.000Z"
+    },
+    {
+      "tarefa": "Documentar endpoints da API",
+      "descricao": "Criar documentação Swagger/OpenAPI para todas as rotas.",
+      "categoria": "Outras Demandas",
+      "status": "a_fazer",
+      "prioridade": "media",
+      "tempo_gasto": 0,
+      "data_limite": "2026-06-15T18:00:00.000Z"
+    },
+    {
+      "tarefa": "Criar seeds do banco de dados",
+      "descricao": "Script para popular o banco com dados de teste automaticamente.",
+      "categoria": "Escrevendo Código",
+      "status": "a_fazer",
+      "prioridade": "baixa",
+      "tempo_gasto": 0,
+      "data_limite": null
+    },
+    {
+      "tarefa": "Revisar pull request do colega",
+      "descricao": "Analisar o PR #42 com refatoração do controller de usuários.",
+      "categoria": "Outras Demandas",
+      "status": "em_revisao",
+      "prioridade": "media",
+      "tempo_gasto": 0.5,
+      "data_limite": "2026-06-09T17:00:00.000Z"
+    },
+    {
+      "tarefa": "Configurar CI/CD no GitHub Actions",
+      "descricao": "Pipeline de build e testes automáticos a cada push na main.",
+      "categoria": "Escrevendo Código",
+      "status": "a_fazer",
+      "prioridade": "alta",
+      "tempo_gasto": 0,
+      "data_limite": "2026-06-12T18:00:00.000Z"
+    },
+    {
+      "tarefa": "Estudar MongoDB Aggregation Pipeline",
+      "descricao": "Praticar $group, $lookup e $project para os relatórios de analytics.",
+      "categoria": "Cursos",
+      "status": "concluido",
+      "prioridade": "alta",
+      "tempo_gasto": 6.0,
+      "data_limite": "2026-06-01T23:59:00.000Z"
+    }
+  ],
+
+  "exemplos_requests": {
+    "cadastro": {
+      "method": "POST",
+      "url": "/api/auth/cadastro",
+      "body": {
+        "nome": "Ana Souza",
+        "email": "ana.souza@email.com",
+        "senha": "senha123456"
+      }
+    },
+    "login": {
+      "method": "POST",
+      "url": "/api/auth/login",
+      "body": {
+        "email": "ana.souza@email.com",
+        "senha": "senha123456"
+      }
+    },
+    "criar_tarefa": {
+      "method": "POST",
+      "url": "/api/tasks",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      },
+      "body": {
+        "tarefa": "Implementar autenticação JWT",
+        "descricao": "Adicionar login e cadastro com geração de token JWT.",
+        "categoria": "Escrevendo Código",
+        "prioridade": "alta",
+        "data_limite": "2026-06-10T18:00:00.000Z"
+      }
+    },
+    "atualizar_status": {
+      "method": "PATCH",
+      "url": "/api/tasks/:id/status",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      },
+      "body": {
+        "status": "em_progresso"
+      }
+    }
+  }
+}

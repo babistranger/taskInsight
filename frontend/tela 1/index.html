@@ -8,9 +8,9 @@
   <!-- ============================================================
        TELA 1 — QUADRO KANBAN DE TAREFAS
        Back-end relacionado:
-         GET  {API_BASE}/tasks          -> lista de tarefas (renderiza colunas)
-         POST {API_BASE}/tasks          -> criar nova tarefa (FAB / botão "Nova Tarefa")
-         PUT  {API_BASE}/tasks/:id      -> mover tarefa entre colunas (futuro)
+         GET  {API_BASE}/api/tasks          -> lista de tarefas (renderiza colunas)
+         POST {API_BASE}/api/tasks          -> criar nova tarefa (próxima etapa)
+         PATCH {API_BASE}/api/tasks/:id/status -> mover tarefa entre colunas
 
        Header Authorization: Bearer <ti_token>
        ============================================================ -->
@@ -31,25 +31,27 @@
 
       <!-- Menu de navegação (estático; links internos do front) -->
       <nav class="sb-nav">
+        <!-- Grupo "Dashboard": expande para os sub-itens "Gráficos e
+             Analytics" (tela 2) e "Relatórios" (tela 3). O toggle é
+             controlado por setupSidebarToggle() em script.js. -->
         <div class="nav-group">
-          <a href="#" class="nav-item active">
+          <button type="button" class="nav-item nav-toggle" aria-expanded="false">
             <i data-lucide="layout-dashboard"></i> Dashboard
-            <i data-lucide="chevron-down" class="chev"></i>
-          </a>
+            <i class="chev" data-lucide="chevron-down"></i>
+          </button>
           <div class="sub">
-            <a href="index.html" class="sub-item active">Quadro de Tarefas</a>
-            <a href="../tela%202/index.html" class="sub-item">Analytics</a>
+            <a href="../tela%202/index.html" class="sub-item">Gráficos e Analytics</a>
+            <a href="../tela%203/index.html" class="sub-item">Relatórios</a>
           </div>
         </div>
-
-        <a href="#" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="index.html" class="nav-item active"><i data-lucide="check-circle"></i> Tarefas</a>
         <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
         <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
       </nav>
 
       <!-- Rodapé do sidebar -->
       <div class="sb-footer">
-        <!-- Botão "Nova Tarefa" -> dispara modal/POST /tasks (ver script.js) -->
+        <!-- Botão "Nova Tarefa" -> dispara modal/POST /api/tasks (ver script.js) -->
         <button class="btn btn-accent btn-block"><i data-lucide="plus"></i> Nova Tarefa</button>
 
         <!-- Card do usuário logado
@@ -75,10 +77,13 @@
       <header class="topbar">
         <div class="search">
           <i data-lucide="search"></i>
-          <!-- Futuro: ao digitar, pode chamar GET /tasks?q=... -->
+          <!-- Futuro: ao digitar, pode chamar GET /api/tasks?q=... -->
           <input type="search" placeholder="Pesquisar tarefas..." />
         </div>
         <div class="top-actions">
+          <button id="logoutButton" class="btn btn-logout" type="button">
+            <i data-lucide="log-out"></i> Sair
+          </button>
           <button class="icon-btn" aria-label="Notificações"><i data-lucide="bell"></i></button>
           <button class="icon-btn" aria-label="Ajuda"><i data-lucide="help-circle"></i></button>
         </div>
@@ -87,20 +92,106 @@
       <section class="content">
         <div class="page-head">
           <h2>Quadro de Tarefas</h2>
-          <!-- Futuro: abrir painel de filtros e chamar GET /tasks?status=...&priority=... -->
+          <!-- Futuro: abrir painel de filtros e chamar GET /api/tasks?status=...&prioridade=... -->
           <button class="btn btn-outline"><i data-lucide="sliders-horizontal"></i> Filtrar</button>
         </div>
 
         <!-- ⭐ Container onde o KANBAN é renderizado dinamicamente.
              O script.js -> renderBoard() preenche este elemento usando os
-             dados de GET /tasks. Cada tarefa vira um <article class="card-task">.
+             dados de GET /api/tasks. Cada tarefa vira um <article class="card-task">.
         -->
         <div id="board" class="board"></div>
       </section>
 
-      <!-- Botão flutuante (FAB) para criar tarefa rapidamente -> POST /tasks -->
+      <!-- Botão flutuante (FAB) para criar tarefa rapidamente -> POST /api/tasks -->
       <button class="fab" aria-label="Adicionar tarefa"><i data-lucide="plus"></i></button>
     </main>
+  </div>
+
+  <!-- Popup de confirmação de exclusão de tarefa -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Excluir tarefa</h3>
+      <p>Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-outline" type="button">Cancelar</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger" type="button">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup "Nova Tarefa" / "Editar Tarefa" -> POST ou PATCH /api/tasks -->
+  <div id="taskModal" class="modal-overlay">
+    <div class="modal modal-task">
+      <div class="modal-task-head">
+        <div>
+          <h3 id="taskModalTitle">Nova Tarefa</h3>
+          <p id="taskModalSubtitle">Preencha os detalhes da sua próxima entrega</p>
+        </div>
+        <button id="closeTaskModalBtn" class="icon-btn" type="button" aria-label="Fechar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="taskForm" class="task-form">
+        <div class="field">
+          <label for="taskTarefa"><i data-lucide="pencil"></i> Tarefa</label>
+          <input type="text" id="taskTarefa" name="tarefa" placeholder="Ex: Redesign do fluxo de login" required />
+        </div>
+
+        <div class="field">
+          <label for="taskDescricao"><i data-lucide="file-text"></i> Descrição</label>
+          <textarea id="taskDescricao" name="descricao" rows="3" placeholder="Quais os detalhes principais?"></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="taskCategoria"><i data-lucide="tag"></i> Categoria</label>
+            <select id="taskCategoria" name="categoria">
+              <option value="Escrevendo Código">Escrevendo Código</option>
+              <option value="Cursos">Cursos</option>
+              <option value="Debugging">Debugging</option>
+              <option value="Outras Demandas">Outras Demandas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="taskStatus"><i data-lucide="repeat"></i> Status</label>
+            <select id="taskStatus" name="status">
+              <option value="a_fazer">A Fazer</option>
+              <option value="em_progresso">Em Progresso</option>
+              <option value="em_revisao">Em Revisão</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label><i data-lucide="alert-triangle"></i> Prioridade</label>
+            <div class="priority-toggle" role="radiogroup" aria-label="Prioridade">
+              <button type="button" class="priority-btn" data-value="baixa">Baixa</button>
+              <button type="button" class="priority-btn" data-value="media">Média</button>
+              <button type="button" class="priority-btn" data-value="alta">Alta</button>
+            </div>
+            <input type="hidden" id="taskPrioridade" name="prioridade" value="media" />
+          </div>
+          <div class="field">
+            <label for="taskTempo"><i data-lucide="clock"></i> Tempo (h)</label>
+            <input type="number" id="taskTempo" name="tempo_gasto" min="0" step="0.5" value="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="taskDataLimite"><i data-lucide="calendar"></i> Data Limite</label>
+          <input type="date" id="taskDataLimite" name="data_limite" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelTaskBtn" class="btn btn-outline">Cancelar</button>
+          <button type="submit" id="taskSubmitBtn" class="btn btn-create"><span id="taskSubmitLabel">Criar Tarefa</span> <i data-lucide="arrow-right"></i></button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Lógica do board + chamadas à API -->
