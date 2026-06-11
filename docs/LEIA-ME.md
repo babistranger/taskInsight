@@ -18,7 +18,8 @@ routes/            -> páginas auxiliares de roteamento
 
 ## Configuração da API
 
-Em **todos** os arquivos `script.js` existe no topo:
+Em **todos** os arquivos `script.js` (telas 1, 2, 3, login e cadastro)
+existe no topo:
 
 ```js
 const API_BASE = "http://localhost:3000";
@@ -70,7 +71,10 @@ Request:
 ```json
 { "email": "ricardo@exemplo.com", "senha": "Senha@123" }
 ```
-Response 200:
+Regras de senha: mínimo 8 caracteres, ao menos 1 maiúscula, 1 número e
+1 caractere especial.
+
+Response 201:
 ```json
 {
   "token": "jwt...",

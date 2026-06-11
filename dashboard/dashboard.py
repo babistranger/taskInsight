@@ -11,7 +11,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
+ 
 API_URL = os.getenv("API_URL", "http://localhost:3000")
 
 st.set_page_config(
@@ -164,8 +164,12 @@ if not st.session_state.token:
         "Acesse este relatório pela tela **Relatórios** do TaskInsight "
         "(já autenticada) — o login é feito automaticamente."
     )
+    st.info(
+        "Acesse este relatório pela tela **Relatórios** do TaskInsight "
+        "(já autenticada) — o login é feito automaticamente."
+    )
     st.stop()
-
+ 
 H = {"Authorization": f"Bearer {st.session_state.token}"}
 
 # ============================================================
@@ -176,7 +180,7 @@ tasks_resp = requests.get(f"{API_URL}/api/tasks", headers=H, timeout=10)
 if not tasks_resp.ok:
     st.error("Erro ao carregar dados da API.")
     st.stop()
-
+ 
 tasks = tasks_resp.json()
 df = pd.DataFrame(tasks)
 
@@ -370,10 +374,18 @@ with col_a:
         "qtd": [por_status.get(s, 0) for s in STATUS_ORDEM],
         "cor": [STATUS_CORES[s] for s in STATUS_ORDEM],
     })
+    status_df = pd.DataFrame({
+        "status": [STATUS_LABEL[s] for s in STATUS_ORDEM],
+        "qtd": [por_status.get(s, 0) for s in STATUS_ORDEM],
+        "cor": [STATUS_CORES[s] for s in STATUS_ORDEM],
+    })
     fig = px.bar(
         status_df, x="status", y="qtd", color="status",
         color_discrete_map=dict(zip(status_df["status"], status_df["cor"])),
+        status_df, x="status", y="qtd", color="status",
+        color_discrete_map=dict(zip(status_df["status"], status_df["cor"])),
     )
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
     st.plotly_chart(fig, use_container_width=True)
 

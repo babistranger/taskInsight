@@ -11,10 +11,12 @@
 TaskInsight é uma aplicação web de gestão de tarefas com foco em **clareza cognitiva** e **simplicidade visual**. Permite que usuários organizem tarefas em um quadro Kanban, acompanhem métricas de produtividade em um dashboard analítico (Tela 2) e consultem relatórios filtráveis (Tela 3).
 
 A aplicação é desenhada para execução **local no sistema operacional** (Windows/macOS/Linux), seguindo uma arquitetura clássica em **3 camadas** desacopladas, com um módulo adicional de relatórios em Streamlit.
+A aplicação é desenhada para execução **local no sistema operacional** (Windows/macOS/Linux), seguindo uma arquitetura clássica em **3 camadas** desacopladas, com um módulo adicional de relatórios em Streamlit.
 
 ## 2. Objetivos
 
 - Cadastrar e autenticar usuários com segurança (JWT).
+- Permitir CRUD de tarefas com status, prioridade, categoria, tempo gasto e prazo.
 - Permitir CRUD de tarefas com status, prioridade, categoria, tempo gasto e prazo.
 - Exibir o quadro Kanban com 4 colunas (A Fazer, Em Progresso, Em Revisão, Concluído).
 - Apresentar dashboard analítico (Tela 2) com KPIs, gráficos de evolução e distribuição por categoria.
@@ -70,6 +72,7 @@ A aplicação é desenhada para execução **local no sistema operacional** (Win
                           │ Mongoose (ODM)
 ┌─────────────────────────▼────────────────────────────────────┐
 │ CAMADA 3 — DADOS                                             │
+│ MongoDB — coleções: users, tasks                             │
 │ MongoDB — coleções: users, tasks                             │
 └──────────────────────────────────────────────────────────────┘
 
@@ -163,6 +166,7 @@ TaskInsight.
 ## 7. Modelo de Dados (MongoDB / Mongoose)
 
 ```js
+```js
 // users
 {
   _id: ObjectId,
@@ -189,6 +193,7 @@ TaskInsight.
 }
 ```
 
+Índices: `users.email` (unique), `tasks.{usuario, status}`, `tasks.{usuario, deadline}`.
 Índices: `users.email` (unique), `tasks.{usuario, status}`, `tasks.{usuario, deadline}`.
 
 ## 8. Segurança
@@ -228,6 +233,10 @@ cd dashboard
 pip install -r requirements.txt
 streamlit run dashboard.py      # http://localhost:8501
 ```
+
+Acesse `http://localhost:3000` (redireciona para a tela de login). A
+Tela 3 ("Relatórios") embute automaticamente o dashboard Streamlit,
+repassando o token de sessão.
 
 ## 11. Roadmap
 
