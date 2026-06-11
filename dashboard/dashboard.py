@@ -1,5 +1,5 @@
 """Dashboard analítico TaskInsight (Streamlit) — Relatórios (equivalente à Tela 3).
- 
+
 Replica a Tela 3 do front-end (KPIs, gráfico de status, gráfico de
 prioridade e tabela de tarefas) e adiciona um painel de filtros
 (categoria, status, prioridade, tempo gasto e intervalo de prazo),
@@ -13,20 +13,20 @@ import plotly.express as px
 import streamlit as st
  
 API_URL = os.getenv("API_URL", "http://localhost:3000")
- 
+
 st.set_page_config(
     page_title="TaskInsight • Relatórios",
     page_icon="📊",
     layout="wide",
 )
- 
+
 # --- estilo
 st.markdown("""
 <style>
 :root { --primary:#f97316; }
 h1, h2, h3 { color:#7c2d12; }
 .stButton>button { background:var(--primary); color:white; border:0; }
- 
+
 /* Faz os botões "Aplicar Filtros" / "Limpar Filtros" ficarem lado a
    lado, do tamanho do texto, sem espaço extra entre eles — em
    qualquer largura de tela (independe da largura percentual das
@@ -43,7 +43,7 @@ h1, h2, h3 { color:#7c2d12; }
   min-width: fit-content !important;
   flex: none !important;
 }
- 
+
 /* Cores dos botões do painel de filtros: Aplicar = azul do projeto,
    Limpar = branco com borda. */
 .st-key-filtro_botoes button {
@@ -76,7 +76,7 @@ h1, h2, h3 { color:#7c2d12; }
   border-color: #e3dccb !important;
   color: #1f2a44 !important;
 }
- 
+
 /* Botão "Limpar Filtros" exibido junto ao aviso de filtro ativo,
    acima dos gráficos/tabela. */
 .st-key-limpar_filtros_grafico button {
@@ -94,7 +94,7 @@ h1, h2, h3 { color:#7c2d12; }
   border-color: #e3dccb !important;
   color: #1f2a44 !important;
 }
- 
+
 /* Remove completamente a barra lateral do Streamlit — o login é
    feito automaticamente via ?token= (ver auto-login abaixo) e o
    logout fica na Tela 3. */
@@ -104,7 +104,7 @@ h1, h2, h3 { color:#7c2d12; }
 }
 </style>
 """, unsafe_allow_html=True)
- 
+
 # ============================================================
 # Mapeamentos de exibição (mesmos usados em frontend/tela 3/script.js)
 # ============================================================
@@ -114,7 +114,7 @@ CATEGORIA_LABEL = {
     "Debugging": "Debugging & Fixes",
     "Outras Demandas": "Outras Demandas",
 }
- 
+
 STATUS_LABEL = {
     "a_fazer": "A Fazer",
     "em_progresso": "Em Progresso",
@@ -128,18 +128,18 @@ STATUS_CORES = {
     "em_revisao": "#f2934a",
     "concluido": "#d8843a",
 }
- 
+
 PRIORIDADE_LABEL = {"alta": "Alta", "media": "Média", "baixa": "Baixa"}
 PRIORIDADE_ORDEM = ["alta", "media", "baixa"]
 # Mesma paleta da Tela 2/3: alta = laranja, média = bege, baixa = azul
 PRIORIDADE_COR_HEX = {"alta": "#e89547", "media": "#f5e6cf", "baixa": "#5a83b7"}
- 
+
 # ============================================================
 # Login (mesmo fluxo do dashboard original)
 # ============================================================
 if "token" not in st.session_state:
     st.session_state.token = None
- 
+
 # Auto-login: se a Tela 3 (frontend) já estiver autenticada, ela
 # embute o iframe como http://localhost:8501/?token=<ti_token>.
 # Aproveitamos esse token (validando na API) para não pedir login
@@ -158,8 +158,12 @@ if not st.session_state.token:
                 st.session_state.user = r.json()
         except requests.RequestException:
             pass
- 
+
 if not st.session_state.token:
+    st.info(
+        "Acesse este relatório pela tela **Relatórios** do TaskInsight "
+        "(já autenticada) — o login é feito automaticamente."
+    )
     st.info(
         "Acesse este relatório pela tela **Relatórios** do TaskInsight "
         "(já autenticada) — o login é feito automaticamente."
@@ -167,35 +171,35 @@ if not st.session_state.token:
     st.stop()
  
 H = {"Authorization": f"Bearer {st.session_state.token}"}
- 
+
 # ============================================================
 # Dados — equivalente a fetchTasks() / allTasks no script.js
 # ============================================================
 tasks_resp = requests.get(f"{API_URL}/api/tasks", headers=H, timeout=10)
- 
+
 if not tasks_resp.ok:
     st.error("Erro ao carregar dados da API.")
     st.stop()
  
 tasks = tasks_resp.json()
 df = pd.DataFrame(tasks)
- 
+
 st.title("Relatórios")
 st.caption("Visão consolidada e lista completa de tarefas")
- 
+
 if df.empty:
     st.info("Nenhuma tarefa ainda. Crie tarefas no frontend para ver o relatório.")
     st.stop()
- 
+
 # Garante que as colunas usadas nos filtros sempre existam
 for col in ["categoria", "status", "prioridade", "tempo_gasto", "data_limite", "createdAt"]:
     if col not in df.columns:
         df[col] = None
- 
+
 df["tempo_gasto"] = pd.to_numeric(df["tempo_gasto"], errors="coerce").fillna(0)
 df["_data_limite"] = pd.to_datetime(df["data_limite"], errors="coerce")
 df["_created_at"] = pd.to_datetime(df["createdAt"], errors="coerce")
- 
+
 # ============================================================
 # Painel de filtros — equivalente ao #filtersPanel da Tela 3
 # ============================================================
@@ -203,22 +207,22 @@ FILTER_KEYS = [
     "f_categoria", "f_status", "f_prioridade",
     "f_tempo", "f_prazo_de", "f_prazo_ate",
 ]
- 
- 
+
+
 def limpar_filtros():
     """Remove as chaves dos widgets de filtro do session_state.
- 
+
     Precisa rodar via on_click (ANTES dos widgets serem recriados no
     próximo rerun) — apagar essas chaves depois que os widgets já
     foram instanciados nesta execução geraria erro do Streamlit.
     """
     for k in FILTER_KEYS:
         st.session_state.pop(k, None)
- 
- 
+
+
 with st.expander("🔍 Filtros", expanded=False):
     col1, col2, col3 = st.columns(3)
- 
+
     categoria_f = col1.selectbox(
         "Categoria",
         options=["Todas"] + list(CATEGORIA_LABEL.keys()),
@@ -237,9 +241,9 @@ with st.expander("🔍 Filtros", expanded=False):
         format_func=lambda v: "Todas" if v == "Todas" else PRIORIDADE_LABEL.get(v, v),
         key="f_prioridade",
     )
- 
+
     col4, col5, col6 = st.columns(3)
- 
+
     tempo_f = col4.selectbox(
         "Tempo Gasto",
         options=[0, 1, 2, 3, 5],
@@ -248,30 +252,30 @@ with st.expander("🔍 Filtros", expanded=False):
     )
     prazo_de = col5.date_input("Prazo de", value=None, format="DD/MM/YYYY", key="f_prazo_de")
     prazo_ate = col6.date_input("Prazo até", value=None, format="DD/MM/YYYY", key="f_prazo_ate")
- 
+
     with st.container(key="filtro_botoes"):
         btn_col1, btn_col2 = st.columns(2)
         btn_col1.button("Aplicar Filtros", type="primary")
         btn_col2.button("Limpar Filtros", on_click=limpar_filtros)
- 
+
 # ============================================================
 # Aplica os filtros — equivalente a applyFilters() no script.js
 # ============================================================
 df_filtrado = df.copy()
- 
+
 if categoria_f != "Todas":
     df_filtrado = df_filtrado[df_filtrado["categoria"] == categoria_f]
- 
+
 if status_f != "Todos":
     df_filtrado = df_filtrado[df_filtrado["status"] == status_f]
- 
+
 if prioridade_f != "Todas":
     df_filtrado = df_filtrado[df_filtrado["prioridade"] == prioridade_f]
- 
+
 # Tempo gasto: "maior que Xh" -> tempo_gasto > tempoMin
 if tempo_f > 0:
     df_filtrado = df_filtrado[df_filtrado["tempo_gasto"] > tempo_f]
- 
+
 # Prazo: intervalo de datas (data_limite). Tarefas sem prazo são
 # excluídas quando algum limite de data está definido.
 if prazo_de or prazo_ate:
@@ -280,7 +284,7 @@ if prazo_de or prazo_ate:
         df_filtrado = df_filtrado[df_filtrado["_data_limite"].dt.date >= prazo_de]
     if prazo_ate:
         df_filtrado = df_filtrado[df_filtrado["_data_limite"].dt.date <= prazo_ate]
- 
+
 # ============================================================
 # Agregados — equivalente a computeAggregates() no script.js
 # ============================================================
@@ -289,9 +293,9 @@ por_prioridade = df_filtrado["prioridade"].value_counts().to_dict()
 total = len(df_filtrado)
 concluidas = por_status.get("concluido", 0)
 progresso = round(concluidas / total * 100) if total else 0
- 
+
 st.divider()
- 
+
 # ============================================================
 # KPIs — equivalente a renderKpis()
 # Renderizados como cards, espelhando o .kpi da Tela 3: todos em
@@ -300,8 +304,8 @@ st.divider()
 # Azul do projeto (var(--info)) — usado no valor dos 4 cards.
 AZUL_PROJETO = "#5a83b7"
 BEGE_PROJETO = "#f1ede2"
- 
- 
+
+
 def _kpi_card(titulo, valor, subtitulo, bg, color, valor_color=None):
     valor_color = valor_color or color
     return f"""
@@ -311,8 +315,8 @@ def _kpi_card(titulo, valor, subtitulo, bg, color, valor_color=None):
       <small style="font-size:13px;opacity:.85;">{html.escape(subtitulo)}</small>
     </div>
     """
- 
- 
+
+
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown(_kpi_card("Pendentes", por_status.get("a_fazer", 0), "A Fazer", BEGE_PROJETO, "#1f2a44", AZUL_PROJETO), unsafe_allow_html=True)
@@ -322,13 +326,13 @@ with c3:
     st.markdown(_kpi_card("Concluídas", por_status.get("concluido", 0), "Finalizadas", BEGE_PROJETO, "#1f2a44", AZUL_PROJETO), unsafe_allow_html=True)
 with c4:
     st.markdown(_kpi_card("% Conclusão", f"{progresso}%", "Indicador", BEGE_PROJETO, "#1f2a44", AZUL_PROJETO), unsafe_allow_html=True)
- 
+
 st.divider()
- 
+
 if df_filtrado.empty:
     st.info("Nenhuma tarefa encontrada para os filtros selecionados.")
     st.stop()
- 
+
 # ============================================================
 # Gráficos — equivalentes a renderStatusChart() e renderPriorityChart()
 # ============================================================
@@ -340,7 +344,7 @@ filtros_ativos = (
     or prazo_de is not None
     or prazo_ate is not None
 )
- 
+
 if filtros_ativos:
     col_badge, col_clear = st.columns([5, 1], vertical_alignment="center")
     with col_badge:
@@ -360,11 +364,16 @@ if filtros_ativos:
             key="limpar_filtros_grafico",
             on_click=limpar_filtros,
         )
- 
+
 col_a, col_b = st.columns(2)
- 
+
 with col_a:
     st.subheader("Tarefas por Status")
+    status_df = pd.DataFrame({
+        "status": [STATUS_LABEL[s] for s in STATUS_ORDEM],
+        "qtd": [por_status.get(s, 0) for s in STATUS_ORDEM],
+        "cor": [STATUS_CORES[s] for s in STATUS_ORDEM],
+    })
     status_df = pd.DataFrame({
         "status": [STATUS_LABEL[s] for s in STATUS_ORDEM],
         "qtd": [por_status.get(s, 0) for s in STATUS_ORDEM],
@@ -373,10 +382,13 @@ with col_a:
     fig = px.bar(
         status_df, x="status", y="qtd", color="status",
         color_discrete_map=dict(zip(status_df["status"], status_df["cor"])),
+        status_df, x="status", y="qtd", color="status",
+        color_discrete_map=dict(zip(status_df["status"], status_df["cor"])),
     )
     fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
+    fig.update_layout(showlegend=False, xaxis_title=None, yaxis_title=None)
     st.plotly_chart(fig, use_container_width=True)
- 
+
 with col_b:
     st.subheader("Tarefas por Prioridade")
     presentes = [p for p in PRIORIDADE_ORDEM if por_prioridade.get(p, 0) > 0]
@@ -394,7 +406,7 @@ with col_b:
         st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info("Sem dados de prioridade para exibir.")
- 
+
 # ============================================================
 # Tabela "Todas as Tarefas" — equivalente a renderTasksTable()
 # Usa st.dataframe (nativo) para permitir ordenar clicando no
@@ -402,7 +414,7 @@ with col_b:
 # (mesma paleta da Tela 3) via pandas Styler.
 # ============================================================
 st.subheader("Todas as Tarefas")
- 
+
 # Mesmas cores de "etiqueta" usadas na tabela da Tela 3
 # (.tag-alta, .tag-media, .tag-baixa, .tag-status)
 PRIORIDADE_CORES = {
@@ -411,7 +423,7 @@ PRIORIDADE_CORES = {
     "Baixa": ("#e0eaf6", "#2f578a"),
 }
 STATUS_COR = ("#f1ede2", "#1f2a44")
- 
+
 tabela_disp = pd.DataFrame({
     "Tarefa": df_filtrado["tarefa"],
     "Categoria": df_filtrado["categoria"].map(CATEGORIA_LABEL).fillna(df_filtrado["categoria"]),
@@ -421,24 +433,24 @@ tabela_disp = pd.DataFrame({
     "Prazo": df_filtrado["_data_limite"],
     "Criada em": df_filtrado["_created_at"],
 }).sort_values("Criada em", ascending=False)
- 
- 
+
+
 def _cor_status(_valor):
     bg, fg = STATUS_COR
     return f"background-color:{bg};color:{fg};font-weight:700;border-radius:6px;"
- 
- 
+
+
 def _cor_prioridade(valor):
     bg, fg = PRIORIDADE_CORES.get(valor, ("", "#1f2a44"))
     if not bg:
         return ""
     return f"background-color:{bg};color:{fg};font-weight:700;border-radius:6px;"
- 
- 
+
+
 def _fmt_data(d):
     return d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
- 
- 
+
+
 styler = (
     tabela_disp.style
     .map(_cor_status, subset=["Status"])
@@ -449,6 +461,6 @@ styler = (
         "Criada em": _fmt_data,
     })
 )
- 
+
 st.dataframe(styler, use_container_width=True, hide_index=True)
 st.caption("Clique no cabeçalho de uma coluna para ordenar a tabela.")

@@ -1,18 +1,19 @@
-# TaskInsight — Guia de Integração Front-end ↔ Back-end
+# TaskInsight — Versão Comentada (guia de integração com o Back-end)
 
-Este documento descreve como as telas em `/frontend` e o dashboard em
-`/dashboard` se conectam à API em `/api`, incluindo os contratos
-(endpoints, payloads) e o esquema de dados realmente usados pela
-aplicação hoje.
+Esta pasta contém os módulos do front-end do TaskInsight, com **comentários
+explicativos em português** indicando, em cada ponto, **o que vem da API** e
+**onde colocar cada dado retornado pelo back-end**.
 
 ## Estrutura
 
 ```
 login/             -> Tela de login              (POST /api/auth/login)
 login cadastro/    -> Tela de cadastro           (POST /api/auth/cadastro)
-tela 1/            -> Quadro de Tarefas          (GET/POST/PATCH/DELETE /api/tasks)
-tela 2/            -> Dashboard de Analytics     (GET /api/tasks/analytics/resumo)
-tela 3/            -> Relatórios                 (Streamlit embutido via <iframe>)
+tela 1/            -> Quadro de Tarefas (Kanban) (GET/POST/PATCH/DELETE /api/tasks)
+tela 2/            -> Gráficos e Analytics       (GET /api/tasks/analytics/resumo)
+tela 3/            -> Relatórios                 (iframe com dashboard Streamlit)
+assets/            -> ícones e imagens compartilhadas
+routes/            -> páginas auxiliares de roteamento
 ```
 
 ## Configuração da API
@@ -24,16 +25,18 @@ existe no topo:
 const API_BASE = "http://localhost:3000";
 ```
 
-Troque essa constante pela URL real do seu back-end caso necessário.
+Por padrão a própria API (Express) já serve o front-end estaticamente nessa
+mesma porta, então normalmente não é preciso alterar essa constante. Caso o
+front seja servido separadamente, troque `API_BASE` pela URL real do back-end.
 
 ## Autenticação
 
 Após login/cadastro bem-sucedido, o front guarda no `localStorage`:
 
-| Chave         | Conteúdo                                        |
-|---------------|--------------------------------------------------|
-| `ti_token`    | JWT (string) retornado por `/api/auth/login`     |
-| `ti_user`     | Objeto JSON `{ id, nome, email }`                |
+| Chave         | Conteúdo                                            |
+|---------------|------------------------------------------------------|
+| `ti_token`    | JWT (string) retornado por `/api/auth/login` ou `/api/auth/cadastro` |
+| `ti_user`     | Objeto JSON `{ id, nome, email }`                    |
 
 Todas as chamadas autenticadas enviam:
 
@@ -41,15 +44,32 @@ Todas as chamadas autenticadas enviam:
 Authorization: Bearer <ti_token>
 ```
 
-Se o token for inválido/ausente, cada tela redireciona para
-`login/index.html` (ver `ensureAuthenticated()` em cada `script.js`).
+Se a API responder `401`, o front deve limpar `ti_token`/`ti_user` e
+redirecionar para `login/index.html`.
 
 ## Contratos da API
 
 ### POST /api/auth/cadastro
 Request:
 ```json
-{ "nome": "Ricardo Silva", "email": "ricardo@x.com", "senha": "Senha@123" }
+{ "nome": "Ricardo Silva", "email": "ricardo@exemplo.com", "senha": "Senha@123" }
+```
+Regras de senha: mínimo 8 caracteres, pelo menos 1 letra maiúscula, 1 número
+e 1 caractere especial.
+
+Response 201:
+```json
+{
+  "token": "jwt...",
+  "usuario": { "id": "65a...", "nome": "Ricardo Silva", "email": "ricardo@exemplo.com" }
+}
+```
+Erros: `400` (campos faltando / senha fraca), `409` (e-mail já cadastrado).
+
+### POST /api/auth/login
+Request:
+```json
+{ "email": "ricardo@exemplo.com", "senha": "Senha@123" }
 ```
 Regras de senha: mínimo 8 caracteres, ao menos 1 maiúscula, 1 número e
 1 caractere especial.
@@ -58,56 +78,82 @@ Response 201:
 ```json
 {
   "token": "jwt...",
-  "usuario": { "id": "65a...", "nome": "Ricardo Silva", "email": "ricardo@x.com" }
+  "usuario": { "id": "65a...", "nome": "Ricardo Silva", "email": "ricardo@exemplo.com" }
 }
 ```
+Erros: `400` (campos faltando), `401` (credenciais inválidas).
 
-### POST /api/auth/login
-Request:
+### GET /api/users/me  (autenticado)
+Response 200 — dados do usuário logado (usado pelo dashboard Streamlit para
+validar o token recebido via `?token=`):
 ```json
-{ "email": "ricardo@x.com", "senha": "Senha@123" }
+{ "id": "65a...", "nome": "Ricardo Silva", "email": "ricardo@exemplo.com" }
 ```
-Response 200: mesmo formato do cadastro (`token` + `usuario`).
 
-### GET /api/users/me  (JWT)
-Response 200:
+Outros endpoints de usuário (autenticados):
+- `PATCH /api/users/me` — atualiza nome/e-mail.
+- `PATCH /api/users/me/senha` — troca de senha.
+- `DELETE /api/users/me` — exclui a conta.
+
+### GET /api/tasks  (tela 1, tela 2 e tela 3/dashboard)
+Query params opcionais: `status`, `categoria`, `prioridade`.
+
+Response 200 — array de tarefas:
 ```json
-{ "id": "65a...", "nome": "Ricardo Silva", "email": "ricardo@x.com", "criadoEm": "2026-05-01T12:00:00.000Z" }
+[
+  {
+    "_id": "65b...",
+    "usuario": "65a...",
+    "tarefa": "Refatorar autenticação",
+    "descricao": "Migrar para JWT com expiração configurável",
+    "categoria": "Escrevendo Código",
+    "status": "em_progresso",
+    "prioridade": "alta",
+    "tempo_gasto": 3.5,
+    "data_limite": "2026-06-15T00:00:00.000Z",
+    "createdAt": "2026-06-01T12:00:00.000Z",
+    "updatedAt": "2026-06-09T08:30:00.000Z"
+  }
+]
 ```
-Usado pelas telas 1/2/3 para exibir nome/avatar do usuário, e pelo
-`dashboard.py` (Streamlit) para validar o token recebido via
-`?token=` (auto-login, ver seção "Tela 3 / Streamlit" abaixo).
 
-### Tarefas (tela 1) — `/api/tasks` (JWT)
+Valores possíveis:
+- `categoria`: `"Escrevendo Código" | "Cursos" | "Debugging" | "Outras Demandas"`
+- `status`: `"a_fazer" | "em_progresso" | "em_revisao" | "concluido"`
+- `prioridade`: `"alta" | "media" | "baixa"`
+- `tempo_gasto`: número (horas), padrão `0`
+- `data_limite`: data ISO ou `null`
 
-| Método | Rota                            | Descrição                                |
-|--------|----------------------------------|--------------------------------------------|
-| GET    | `/api/tasks`                    | Lista as tarefas do usuário autenticado    |
-| GET    | `/api/tasks/:id`                 | Busca uma tarefa específica                |
-| POST   | `/api/tasks`                    | Cria nova tarefa                           |
-| PATCH  | `/api/tasks/:id`                  | Atualiza campos de uma tarefa              |
-| PATCH  | `/api/tasks/:id/status`          | Move a tarefa entre colunas (status)       |
-| DELETE | `/api/tasks/:id`                  | Exclui uma tarefa                          |
-| GET    | `/api/tasks/analytics/resumo`   | KPIs/agregados (ver Tela 2)                |
-
-Cada tarefa retornada tem o formato:
+### POST /api/tasks  (criar tarefa)
+Request — apenas `tarefa` é obrigatório, demais campos têm default:
 ```json
 {
-  "_id": "65b...",
-  "usuario": "65a...",
-  "tarefa": "Redesign da Landing Page",
-  "descricao": "string opcional",
-  "categoria": "Escrevendo Código | Cursos | Debugging | Outras Demandas",
-  "status": "a_fazer | em_progresso | em_revisao | concluido",
-  "prioridade": "alta | media | baixa",
-  "tempo_gasto": 4.5,
-  "data_limite": "2026-06-15T00:00:00.000Z",
-  "createdAt": "2026-06-01T10:00:00.000Z",
-  "updatedAt": "2026-06-05T09:30:00.000Z"
+  "tarefa": "Nova tarefa",
+  "descricao": "",
+  "categoria": "Outras Demandas",
+  "status": "a_fazer",
+  "prioridade": "media",
+  "tempo_gasto": 0,
+  "data_limite": null
 }
 ```
+Response 201: a tarefa criada (mesmo formato do `GET /api/tasks`).
 
-### GET /api/tasks/analytics/resumo?periodo=diario|semanal|mensal  (tela 2, JWT)
+### GET /api/tasks/:id, PATCH /api/tasks/:id, DELETE /api/tasks/:id
+- `GET` retorna a tarefa.
+- `PATCH` aceita qualquer subconjunto de `tarefa, descricao, categoria, status, prioridade, tempo_gasto, data_limite`.
+- `DELETE` retorna `{ "mensagem": "Tarefa removida com sucesso." }`.
+
+### PATCH /api/tasks/:id/status  (mover card no Kanban)
+Request:
+```json
+{ "status": "em_progresso" }
+```
+`status` deve ser um dos 4 valores válidos.
+
+### GET /api/tasks/analytics/resumo  (tela 2)
+Query param opcional: `periodo` = `diario | semanal | mensal` (padrão `semanal`).
+Afeta apenas o campo `distribuicao`.
 
 Response 200:
 ```json
@@ -115,12 +161,25 @@ Response 200:
   "progresso": 84,
   "total": 25,
   "concluidas": 21,
-  "por_status": [{ "_id": "concluido", "count": 21 }],
-  "por_categoria": [{ "_id": "Cursos", "count": 5, "tempo_total": 12 }],
-  "por_prioridade": [{ "_id": "alta", "count": 8, "tempo_total": 30 }],
-  "por_categoria_prioridade": [{ "_id": { "categoria": "Cursos", "prioridade": "media" }, "count": 3, "tempo_total": 8 }],
-  "proximas_entregas": [{ "tarefa": "...", "data_limite": "...", "prioridade": "alta", "status": "a_fazer" }],
-  "carga_semanal": 18,
+  "por_status": [
+    { "_id": "a_fazer", "count": 2 },
+    { "_id": "em_progresso", "count": 1 },
+    { "_id": "em_revisao", "count": 1 },
+    { "_id": "concluido", "count": 21 }
+  ],
+  "por_categoria": [
+    { "_id": "Escrevendo Código", "count": 10, "tempo_total": 32 }
+  ],
+  "por_prioridade": [
+    { "_id": "alta", "count": 5, "tempo_total": 18 }
+  ],
+  "por_categoria_prioridade": [
+    { "_id": { "categoria": "Escrevendo Código", "prioridade": "alta" }, "count": 3, "tempo_total": 12 }
+  ],
+  "proximas_entregas": [
+    { "_id": "65b...", "tarefa": "Revisar PR", "data_limite": "2026-06-12T00:00:00.000Z", "prioridade": "alta", "status": "em_progresso" }
+  ],
+  "carga_semanal": 14.5,
   "distribuicao": {
     "periodo": "semanal",
     "labels": ["Código", "Cursos", "Debug", "Outras"],
@@ -130,71 +189,67 @@ Response 200:
 }
 ```
 
+Notas:
+- `por_status`, `por_categoria`, `por_prioridade`, `por_categoria_prioridade` e
+  `proximas_entregas` vêm como **arrays** (resultado de agregações do
+  MongoDB) — converta para `dict`/`map` por `_id` quando precisar de acesso
+  direto (ex.: `por_status` → `{ a_fazer: 2, em_progresso: 1, ... }`).
+- `por_categoria_prioridade` traz o tempo gasto por categoria/prioridade
+  filtrado pelo `periodo` (com fallback para o total geral se não houver
+  tarefas com `data_limite` no período); é a base do card "Tempo por Área".
+
+### GET /api/health
+Health-check simples, sem autenticação.
+
 ## Tela 3 (Relatórios) e o dashboard Streamlit
 
-A Tela 3 não monta mais KPIs/gráficos/tabela em JavaScript. O
-`script.js` da Tela 3 cuida apenas de autenticação (guard), sidebar e
-logout — exatamente como as telas 1 e 2. Todo o relatório (filtros,
-KPIs, gráficos de status/prioridade e tabela de tarefas ordenável) é
-gerado pelo **`dashboard.py`** (Streamlit) e embutido na página via
-`<iframe>`.
+A Tela 3 não reimplementa os relatórios em JS — ela é um "casco" (sidebar +
+autenticação + logout, igual às telas 1 e 2) com um `<iframe>` que embute o
+dashboard Python (Streamlit), responsável por filtros, KPIs, gráficos e a
+tabela completa de tarefas.
 
-### Auto-login (token pass-through)
+### Fluxo de auto-login (token pass-through)
 
-O Streamlit roda em outra origem (`http://localhost:8501`) e não
-acessa o `localStorage` da Tela 3. Para evitar pedir login de novo:
+1. O usuário já está autenticado na Tela 3 (possui `ti_token` no `localStorage`).
+2. `script.js` (`setupStreamlitFrame()`) monta a URL do iframe como:
+   ```
+   http://localhost:8501/?token=<ti_token>
+   ```
+   e usa a mesma URL no link "Abrir em nova aba".
+3. `dashboard.py` lê `st.query_params["token"]`, valida o token chamando
+   `GET /api/users/me` com `Authorization: Bearer <token>` e, se válido,
+   considera o usuário autenticado — sem pedir e-mail/senha novamente.
+4. Se não houver token válido, o Streamlit exibe uma mensagem orientando o
+   usuário a acessar pelo TaskInsight (não há mais formulário de login no
+   Streamlit; a barra lateral fica oculta).
 
-1. `setupStreamlitFrame()` (em `tela 3/script.js`) lê `ti_token` do
-   `localStorage` e monta a URL `http://localhost:8501/?token=<ti_token>`,
-   usada tanto no `src` do `<iframe id="streamlitFrame">` quanto no
-   link "Abrir em nova aba".
-2. `dashboard.py` lê `?token=` via `st.query_params`, valida o token
-   chamando `GET /api/users/me` com `Authorization: Bearer <token>` e,
-   se válido, guarda o token/usuário em `st.session_state` — sem exibir
-   tela de login.
-3. Se não houver token válido (ex.: acesso direto a
-   `http://localhost:8501` fora da Tela 3), o dashboard exibe um aviso
-   pedindo para acessar pela tela "Relatórios" do TaskInsight.
+### O que `dashboard.py` faz
 
-A barra lateral padrão do Streamlit foi **removida completamente**
-(CSS `display:none` em `[data-testid="stSidebar"]` e
-`[data-testid="stSidebarCollapsedControl"]`); não há login/logout
-manual dentro do Streamlit — o logout continua sendo feito pela Tela 3.
-
-### Funcionalidades do dashboard.py
-
-- **Filtros** (`expander "🔍 Filtros"`): categoria, status, prioridade,
-  tempo gasto mínimo e intervalo de prazo (data de/até). Botões
-  "Aplicar Filtros" (azul) e "Limpar Filtros" (branco), lado a lado.
-- **Indicador de filtro ativo**: quando algum filtro está aplicado, um
-  selo "🔍 Filtro ativo" aparece acima dos gráficos, junto de um botão
-  "✕ Limpar Filtros" que reseta todos os filtros.
-- **KPIs**: cards de Pendentes, Em Progresso, Concluídas e % de
-  Conclusão (sempre refletindo os filtros aplicados).
-- **Gráficos**: barras por status e doughnut por prioridade
-  (`plotly.express`), com as mesmas cores usadas no resto do app.
-- **Tabela "Todas as Tarefas"**: `st.dataframe` nativo com células de
-  Status/Prioridade coloridas (via `pandas.Styler`); clicar no
-  cabeçalho de uma coluna ordena a tabela.
+- Busca `GET /api/tasks` (todas as tarefas do usuário).
+- Painel de filtros (expansível): categoria, status, prioridade, tempo gasto
+  mínimo e intervalo de prazo (`data_limite`), com botão "Limpar Filtros".
+- KPIs: Pendentes, Em Progresso, Concluídas, % Conclusão (cards estilizados).
+- Gráfico de barras "Tarefas por Status" e gráfico de pizza "Tarefas por
+  Prioridade", com as mesmas cores usadas no front-end.
+- Tabela "Todas as Tarefas" (ordenável por coluna), com Status e Prioridade
+  coloridos como nas etiquetas do front-end.
 
 ### Como executar
 
 ```bash
-# API (porta 3000) — também serve o frontend estático em /
-cd api && npm install && npm start
+# Banco
+mongod --dbpath ./data
 
-# Dashboard (Streamlit, porta 8501)
-pip install -r dashboard/requirements.txt
-cd dashboard && streamlit run dashboard.py
+# API + Frontend (a API serve o frontend estaticamente)
+cd api
+npm install
+npm start                 # http://localhost:3000
+
+# Dashboard (Tela 3)
+cd dashboard
+pip install -r requirements.txt
+streamlit run dashboard.py   # http://localhost:8501
 ```
 
-`dashboard/requirements.txt`:
-```
-streamlit==1.38.0
-requests==2.32.3
-pandas==2.2.2
-plotly==5.24.1
-```
-
-A variável de ambiente `API_URL` (padrão `http://localhost:3000`) pode
-ser usada para apontar o `dashboard.py` para outra instância da API.
+Acesse `http://localhost:3000`, faça login e navegue até **Dashboard →
+Relatórios** para ver o dashboard embutido.

@@ -6,7 +6,7 @@ function setSession(t, u) {
   localStorage.setItem("ti_user", JSON.stringify(u));
 }
 function user() { try { return JSON.parse(localStorage.getItem("ti_user") || "null"); } catch { return null; } }
-function logout() { localStorage.clear(); location.href = "index.html"; }
+function logout() { localStorage.clear(); location.href = "/login/"; }
 
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -19,4 +19,4 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-function requireAuth() { if (!token()) location.href = "index.html"; }
+function requireAuth() { if (!token()) { location.href = "/login/"; } }
