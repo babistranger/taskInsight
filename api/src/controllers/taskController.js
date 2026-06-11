@@ -181,6 +181,22 @@ const inicioDoPeriodo = (periodo) => {
   return data;
 };
 
+// Calcula a data de fim (exclusivo) de um período (diario | semanal | mensal),
+// a partir do seu início (ver inicioDoPeriodo)
+const fimDoPeriodo = (periodo, inicio) => {
+  const data = new Date(inicio);
+
+  if (periodo === 'mensal') {
+    data.setMonth(data.getMonth() + 1);
+  } else if (periodo === 'semanal') {
+    data.setDate(data.getDate() + 7);
+  } else {
+    data.setDate(data.getDate() + 1);
+  }
+
+  return data;
+};
+
 // ──────────────────────────────────────────────
 // GET /api/tasks/analytics/resumo
 // Query params: periodo (diario | semanal | mensal) -> afeta "distribuicao"
@@ -193,6 +209,7 @@ const getResumoAnalytics = async (req, res) => {
     const periodosValidos = ['diario', 'semanal', 'mensal'];
     const periodo = periodosValidos.includes(req.query.periodo) ? req.query.periodo : 'semanal';
     const inicioPeriodo = inicioDoPeriodo(periodo);
+    const fimPeriodo = fimDoPeriodo(periodo, inicioPeriodo);
 
     const [
       total,
@@ -200,6 +217,8 @@ const getResumoAnalytics = async (req, res) => {
       porStatus,
       porCategoria,
       porPrioridade,
+      porCategoriaPrioridadeTodas,
+      porCategoriaPrioridadePeriodo,
       completasPeriodo,
       alocadoPeriodo,
     ] = await Promise.all([
@@ -224,7 +243,46 @@ const getResumoAnalytics = async (req, res) => {
 
       Task.aggregate([
         { $match: { usuario: userId } },
-        { $group: { _id: '$prioridade', count: { $sum: 1 } } },
+        {
+          $group: {
+            _id: '$prioridade',
+            count: { $sum: 1 },
+            tempo_total: { $sum: '$tempo_gasto' },
+          },
+        },
+      ]),
+
+      // Tempo gasto agrupado por categoria + prioridade (todas as tarefas),
+      // usado como base/fallback para o card "Tempo por Área".
+      Task.aggregate([
+        { $match: { usuario: userId } },
+        {
+          $group: {
+            _id: { categoria: '$categoria', prioridade: '$prioridade' },
+            count: { $sum: 1 },
+            tempo_total: { $sum: '$tempo_gasto' },
+          },
+        },
+      ]),
+
+      // Mesmo agrupamento, restrito às tarefas com data_limite dentro do
+      // período selecionado (diário/semanal/mensal). O tempo_total alimenta
+      // a barra de cada categoria e a prioridade com mais horas define a
+      // cor da barra (alta = laranja, média = bege, baixa = azul).
+      Task.aggregate([
+        {
+          $match: {
+            usuario: userId,
+            data_limite: { $gte: inicioPeriodo, $lt: fimPeriodo },
+          },
+        },
+        {
+          $group: {
+            _id: { categoria: '$categoria', prioridade: '$prioridade' },
+            count: { $sum: 1 },
+            tempo_total: { $sum: '$tempo_gasto' },
+          },
+        },
       ]),
 
       // Tarefas concluídas dentro do período selecionado, por categoria
@@ -261,6 +319,14 @@ const getResumoAnalytics = async (req, res) => {
       { $group: { _id: null, total: { $sum: '$tempo_gasto' } } },
     ]);
 
+    // "Tempo por Área": usa o agrupamento filtrado pelo período (tarefas com
+    // data_limite dentro do período selecionado); se não houver nenhuma
+    // tarefa com prazo nesse período, cai para o total geral (todas as
+    // tarefas) para que o card sempre reflita dados reais existentes.
+    const porCategoriaPrioridade = porCategoriaPrioridadePeriodo.length > 0
+      ? porCategoriaPrioridadePeriodo
+      : porCategoriaPrioridadeTodas;
+
     // Monta a distribuição por categoria no período selecionado
     const mapCompletas = Object.fromEntries(completasPeriodo.map((i) => [i._id, i.count]));
     const mapAlocado = Object.fromEntries(alocadoPeriodo.map((i) => [i._id, i.tempo_total]));
@@ -279,6 +345,7 @@ const getResumoAnalytics = async (req, res) => {
       por_status: porStatus,
       por_categoria: porCategoria,
       por_prioridade: porPrioridade,
+      por_categoria_prioridade: porCategoriaPrioridade,
       proximas_entregas,
       carga_semanal: carga_semanal[0]?.total ?? 0,
       distribuicao,
