@@ -31,18 +31,21 @@
       </div>
 
       <nav class="sb-nav">
+        <!-- Grupo "Dashboard": expande para os sub-itens "Gráficos e
+             Analytics" (esta tela) e "Relatórios" (tela 3). Já abre
+             expandido (.open) pois estamos dentro do grupo. O toggle é
+             controlado por setupSidebarToggle() em script.js. -->
         <div class="nav-group open">
-          <button class="nav-item active nav-toggle" type="button" aria-expanded="true" aria-controls="dashboardSubmenu">
+          <button type="button" class="nav-item nav-toggle active" aria-expanded="true">
             <i data-lucide="layout-dashboard"></i> Dashboard
-            <i data-lucide="chevron-down" class="chev"></i>
+            <i class="chev" data-lucide="chevron-down"></i>
           </button>
-          <div class="sub" id="dashboardSubmenu">
-            <a href="../tela%201/index.html" class="sub-item">Quadro de Tarefas</a>
-            <a href="index.html" class="sub-item active">Analytics</a>
+          <div class="sub">
+            <a href="index.html" class="sub-item active">Gráficos e Analytics</a>
+            <a href="../tela%203/index.html" class="sub-item">Relatórios</a>
           </div>
         </div>
-
-        <a href="#" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="../tela%201/index.html" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
         <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
         <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
       </nav>
@@ -124,8 +127,8 @@
             <div class="kpi-row">
               <div class="kpi">
                 <div class="kpi-h"><i data-lucide="calendar"></i> Próxima Entrega</div>
-                <strong>MVP Release</strong>
-                <small>Em 3 dias</small>
+                <strong id="nextDeliveryTitle">MVP Release</strong>
+                <small id="nextDeliveryDate">Em 3 dias</small>
               </div>
               <div class="kpi">
                 <div class="kpi-h"><i data-lucide="alert-circle"></i> Bloqueadores</div>
@@ -140,12 +143,14 @@
             </div>
           </div>
 
-          <!-- Card "Minhas Entregas"
+          <!-- Card "Minhas Próximas Entregas"
                #deliveries é uma <ul> preenchida pelo script com data.deliveries.
-               Cada item esperado: { title, sub, badge, cls } -->
+               Cada item esperado: { title, sub, badge, cls }, vindo de
+               proximas_entregas (tarefas não concluídas, ordenadas pela
+               data_limite mais próxima da data atual). -->
           <div class="card">
             <div class="card-h">
-              <h3>Minhas Entregas</h3>
+              <h3>Minhas Próximas Entregas</h3>
               <button class="icon-btn"><i data-lucide="more-vertical"></i></button>
             </div>
             <ul class="delivery" id="deliveries"></ul>
@@ -157,27 +162,46 @@
 
           <!-- Card "Tempo por Área"
                #timeArea é preenchido pelo script com data.timeArea.
-               Cada item: { label, value, color } -> vira uma barra horizontal. -->
-          <div class="card">
-            <h3>Tempo por Área</h3>
-            <div id="timeArea" class="bars"></div>
-            <!-- Legenda visual (estática) -->
-            <div class="legend">
-              <span><i class="dot" style="background:var(--accent)"></i> Alta Prioridade</span>
-              <span><i class="dot" style="background:var(--primary)"></i> Infraestrutura</span>
-            </div>
-          </div>
-
-          <!-- Card "Distribuição Mensal"
-               <canvas id="distChart"> é renderizado pelo Chart.js usando
-               data.distribution = { labels, completed, allocated } -->
+               Cada item: { label, value, color } -> vira uma barra horizontal.
+               #timeAreaPeriod permite alternar entre diário, semanal e mensal,
+               refazendo GET /api/tasks/analytics/resumo?periodo=... -->
           <div class="card">
             <div class="card-h">
               <div>
-                <h3>Distribuição Mensal</h3>
-                <p class="muted">Tempo gasto por área no mês atual</p>
+                <h3 id="timeAreaTitle">Tempo por Área</h3>
+                <p class="muted">Horas registradas por categoria no período</p>
               </div>
-              <button class="icon-btn"><i data-lucide="filter"></i></button>
+              <select id="timeAreaPeriod" class="period-select" aria-label="Período do tempo por área">
+                <option value="diario">Diária</option>
+                <option value="semanal" selected>Semanal</option>
+                <option value="mensal">Mensal</option>
+              </select>
+            </div>
+            <div id="timeArea" class="bars"></div>
+            <!-- Legenda de prioridades (estática) -->
+            <div class="legend">
+              <span><i class="dot" style="background:var(--accent)"></i> Alta Prioridade</span>
+              <span><i class="dot" style="background:#f5e6cf"></i> Média Prioridade</span>
+              <span><i class="dot" style="background:var(--info)"></i> Baixa Prioridade</span>
+            </div>
+          </div>
+
+          <!-- Card "Distribuição"
+               <canvas id="distChart"> é renderizado pelo Chart.js usando
+               data.distribution = { labels, completed, allocated }
+               #distPeriod permite alternar entre diário, semanal e mensal,
+               refazendo GET /api/tasks/analytics/resumo?periodo=... -->
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h3 id="distTitle">Distribuição Semanal</h3>
+                <p class="muted">Frequência de atividades por categoria</p>
+              </div>
+              <select id="distPeriod" class="period-select" aria-label="Período da distribuição">
+                <option value="diario">Diária</option>
+                <option value="semanal" selected>Semanal</option>
+                <option value="mensal">Mensal</option>
+              </select>
             </div>
             <div class="chart-wrap"><canvas id="distChart"></canvas></div>
             <div class="legend center">
@@ -192,7 +216,7 @@
 
   <!-- Chart.js (gráfico de barras) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="../routes/api.js"></script>
+  <!-- Lógica + chamada de API -->
   <script src="script.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>

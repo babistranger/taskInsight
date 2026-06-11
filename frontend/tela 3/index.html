@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskInsight — Relatórios</title>
+
+  <!-- ============================================================
+       TELA 3 — RELATÓRIOS
+       Os relatórios (KPIs, filtros, gráficos e tabela de tarefas)
+       são gerados pelo dashboard.py (Streamlit), executado como
+       servidor próprio via `streamlit run dashboard.py` (padrão:
+       http://localhost:8501) e embutido aqui via <iframe>. O
+       dashboard consome diretamente:
+         GET {API_BASE}/api/tasks  -> lista completa de tarefas
+         Header Authorization: Bearer <token> (login feito no
+         próprio Streamlit)
+       ============================================================ -->
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ SIDEBAR (igual às telas 1 e 2) ============ -->
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <h1>TaskInsight</h1>
+        <span>Produtividade</span>
+      </div>
+
+      <nav class="sb-nav">
+        <!-- Grupo "Dashboard": expande para os sub-itens "Gráficos e
+             Analytics" (tela 2) e "Relatórios" (esta tela). Já abre
+             expandido (.open) pois estamos dentro do grupo. O toggle é
+             controlado por setupSidebarToggle() em script.js. -->
+        <div class="nav-group open">
+          <button type="button" class="nav-item nav-toggle active" aria-expanded="true">
+            <i data-lucide="layout-dashboard"></i> Dashboard
+            <i class="chev" data-lucide="chevron-down"></i>
+          </button>
+          <div class="sub">
+            <a href="../tela%202/index.html" class="sub-item">Gráficos e Analytics</a>
+            <a href="index.html" class="sub-item active">Relatórios</a>
+          </div>
+        </div>
+        <a href="../tela%201/index.html" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
+        <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
+      </nav>
+
+      <div class="sb-footer">
+        <button class="btn btn-accent btn-block"><i data-lucide="plus"></i> Nova Tarefa</button>
+
+        <div class="user">
+          <div class="avatar">RS</div>
+          <div>
+            <strong id="userName">Ricardo Silva</strong>
+            <small id="userRole">Desenvolvedor FullStack</small>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <i data-lucide="search"></i>
+          <input type="search" placeholder="Pesquisar tarefas..." />
+        </div>
+        <div class="top-actions">
+          <button id="logoutButton" class="btn btn-logout" type="button">
+            <i data-lucide="log-out"></i> Sair
+          </button>
+          <button class="icon-btn"><i data-lucide="bell"></i></button>
+          <button class="icon-btn"><i data-lucide="help-circle"></i></button>
+        </div>
+      </header>
+
+      <section class="content">
+
+        <div class="page-head">
+          <div>
+            <h2>Relatórios</h2>
+            <p class="muted">Visão consolidada e lista completa de tarefas</p>
+          </div>
+          <div class="head-actions">
+            <a id="openStreamlitLink" href="http://localhost:8501" target="_blank" rel="noopener" class="btn btn-outline">
+              <i data-lucide="external-link"></i> Abrir em nova aba
+            </a>
+          </div>
+        </div>
+
+        <!-- ============ DASHBOARD PYTHON (STREAMLIT) ============
+             Relatório completo (filtros, KPIs, gráficos e tabela de
+             tarefas) gerado pelo dashboard.py (Streamlit), executado
+             como servidor próprio via `streamlit run dashboard.py`
+             (padrão: http://localhost:8501) e embutido aqui via
+             <iframe>. O src é montado em script.js com
+             ?token=<ti_token> para o Streamlit reaproveitar o login
+             já feito nesta tela (auto-login). -->
+        <div class="card iframe-card">
+          <div class="iframe-wrap">
+            <iframe id="streamlitFrame" src="http://localhost:8501" title="Dashboard Streamlit" loading="lazy"></iframe>
+          </div>
+          <p class="muted iframe-note">
+            Se o conteúdo não carregar, verifique se o Streamlit está em execução
+            (<code>streamlit run dashboard.py</code>) em <code>http://localhost:8501</code>.
+          </p>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- Lógica da tela (auth, sidebar, logout) -->
+  <script src="script.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

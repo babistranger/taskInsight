@@ -31,18 +31,20 @@
 
       <!-- Menu de navegação (estático; links internos do front) -->
       <nav class="sb-nav">
-        <div class="nav-group open">
-          <button class="nav-item active nav-toggle" type="button" aria-expanded="true" aria-controls="dashboardSubmenu">
+        <!-- Grupo "Dashboard": expande para os sub-itens "Gráficos e
+             Analytics" (tela 2) e "Relatórios" (tela 3). O toggle é
+             controlado por setupSidebarToggle() em script.js. -->
+        <div class="nav-group">
+          <button type="button" class="nav-item nav-toggle" aria-expanded="false">
             <i data-lucide="layout-dashboard"></i> Dashboard
-            <i data-lucide="chevron-down" class="chev"></i>
+            <i class="chev" data-lucide="chevron-down"></i>
           </button>
-          <div class="sub" id="dashboardSubmenu">
-            <a href="index.html" class="sub-item active">Quadro de Tarefas</a>
-            <a href="../tela%202/index.html" class="sub-item">Analytics</a>
+          <div class="sub">
+            <a href="../tela%202/index.html" class="sub-item">Gráficos e Analytics</a>
+            <a href="../tela%203/index.html" class="sub-item">Relatórios</a>
           </div>
         </div>
-
-        <a href="#" class="nav-item"><i data-lucide="check-circle"></i> Tarefas</a>
+        <a href="index.html" class="nav-item active"><i data-lucide="check-circle"></i> Tarefas</a>
         <a href="#" class="nav-item"><i data-lucide="folder"></i> Categorias</a>
         <a href="#" class="nav-item"><i data-lucide="settings"></i> Configurações</a>
       </nav>
@@ -106,8 +108,93 @@
     </main>
   </div>
 
-  <script src="../routes/api.js"></script>
-  <script src="../routes/board.js"></script>
+  <!-- Popup de confirmação de exclusão de tarefa -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h3>Excluir tarefa</h3>
+      <p>Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-outline" type="button">Cancelar</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger" type="button">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup "Nova Tarefa" / "Editar Tarefa" -> POST ou PATCH /api/tasks -->
+  <div id="taskModal" class="modal-overlay">
+    <div class="modal modal-task">
+      <div class="modal-task-head">
+        <div>
+          <h3 id="taskModalTitle">Nova Tarefa</h3>
+          <p id="taskModalSubtitle">Preencha os detalhes da sua próxima entrega</p>
+        </div>
+        <button id="closeTaskModalBtn" class="icon-btn" type="button" aria-label="Fechar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="taskForm" class="task-form">
+        <div class="field">
+          <label for="taskTarefa"><i data-lucide="pencil"></i> Tarefa</label>
+          <input type="text" id="taskTarefa" name="tarefa" placeholder="Ex: Redesign do fluxo de login" required />
+        </div>
+
+        <div class="field">
+          <label for="taskDescricao"><i data-lucide="file-text"></i> Descrição</label>
+          <textarea id="taskDescricao" name="descricao" rows="3" placeholder="Quais os detalhes principais?"></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="taskCategoria"><i data-lucide="tag"></i> Categoria</label>
+            <select id="taskCategoria" name="categoria">
+              <option value="Escrevendo Código">Escrevendo Código</option>
+              <option value="Cursos">Cursos</option>
+              <option value="Debugging">Debugging</option>
+              <option value="Outras Demandas">Outras Demandas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="taskStatus"><i data-lucide="repeat"></i> Status</label>
+            <select id="taskStatus" name="status">
+              <option value="a_fazer">A Fazer</option>
+              <option value="em_progresso">Em Progresso</option>
+              <option value="em_revisao">Em Revisão</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label><i data-lucide="alert-triangle"></i> Prioridade</label>
+            <div class="priority-toggle" role="radiogroup" aria-label="Prioridade">
+              <button type="button" class="priority-btn" data-value="baixa">Baixa</button>
+              <button type="button" class="priority-btn" data-value="media">Média</button>
+              <button type="button" class="priority-btn" data-value="alta">Alta</button>
+            </div>
+            <input type="hidden" id="taskPrioridade" name="prioridade" value="media" />
+          </div>
+          <div class="field">
+            <label for="taskTempo"><i data-lucide="clock"></i> Tempo (h)</label>
+            <input type="number" id="taskTempo" name="tempo_gasto" min="0" step="0.5" value="0" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="taskDataLimite"><i data-lucide="calendar"></i> Data Limite</label>
+          <input type="date" id="taskDataLimite" name="data_limite" />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelTaskBtn" class="btn btn-outline">Cancelar</button>
+          <button type="submit" id="taskSubmitBtn" class="btn btn-create"><span id="taskSubmitLabel">Criar Tarefa</span> <i data-lucide="arrow-right"></i></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lógica do board + chamadas à API -->
   <script src="script.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>lucide.createIcons();</script>

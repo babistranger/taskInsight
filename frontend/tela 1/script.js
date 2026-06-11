@@ -92,6 +92,10 @@ function renderBoard(tasks) {
   });
 
   setupDragAndDrop();
+  setupDeleteButtons();
+  setupEditButtons();
+
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderCard(task) {
@@ -108,17 +112,36 @@ function renderCard(task) {
   }[priority] || "Média";
   const taskId = task._id || task.id;
   const userInitials = getUserInitials();
+  const dataLimite = formatDataLimite(task.data_limite);
 
   return `
     <article class="card-task" data-id="${taskId}" draggable="true">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div class="card-top">
         <span class="tag ${tagClass}">${tagLabel}</span>
+        <button class="btn-edit" data-id="${taskId}" draggable="false" type="button" aria-label="Editar tarefa" title="Editar tarefa">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+            <path d="m15 5 4 4"/>
+          </svg>
+        </button>
+        <button class="btn-delete" data-id="${taskId}" draggable="false" type="button" aria-label="Excluir tarefa" title="Excluir tarefa">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <line x1="10" y1="11" x2="10" y2="17"/>
+            <line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </button>
       </div>
       <h3>${escapeHtml(task.tarefa || "Tarefa sem título")}</h3>
       <p>${escapeHtml(task.descricao || "Sem descrição")}</p>
       <div class="card-foot">
         <span class="avatar-sm">${userInitials}</span>
-        <span class="meta">${formatCategory(task.categoria)}</span>
+        <div class="meta-group">
+          <span class="meta">${formatCategory(task.categoria)}</span>
+          ${dataLimite ? `<span class="meta meta-deadline"><i data-lucide="calendar"></i> ${dataLimite}</span>` : ""}
+        </div>
       </div>
     </article>
   `;
@@ -166,6 +189,265 @@ function setupDragAndDrop() {
   });
 }
 
+/* ============================================================
+   EDIÇÃO DE TAREFA (abre o popup já preenchido)
+   Endpoint: PATCH {API_BASE}/api/tasks/:id
+   ============================================================ */
+
+function setupEditButtons() {
+  document.querySelectorAll(".btn-edit").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const taskId = btn.dataset.id;
+      const task = currentTasks.find((item) => (item._id || item.id) === taskId);
+      if (task) openTaskModal(task);
+    });
+  });
+}
+
+/* ============================================================
+   EXCLUSÃO DE TAREFA
+   Endpoint: DELETE {API_BASE}/api/tasks/:id
+   ============================================================ */
+
+let taskIdToDelete = null;
+
+function setupDeleteButtons() {
+  document.querySelectorAll(".btn-delete").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openDeleteModal(btn.dataset.id);
+    });
+  });
+}
+
+function openDeleteModal(taskId) {
+  taskIdToDelete = taskId;
+  document.getElementById("deleteModal")?.classList.add("active");
+}
+
+function closeDeleteModal() {
+  taskIdToDelete = null;
+  document.getElementById("deleteModal")?.classList.remove("active");
+}
+
+function setupDeleteModal() {
+  const modal = document.getElementById("deleteModal");
+  const cancelBtn = document.getElementById("cancelDeleteBtn");
+  const confirmBtn = document.getElementById("confirmDeleteBtn");
+
+  if (!modal || !cancelBtn || !confirmBtn) return;
+
+  cancelBtn.addEventListener("click", closeDeleteModal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeDeleteModal();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("active")) {
+      closeDeleteModal();
+    }
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    if (!taskIdToDelete) return;
+
+    confirmBtn.disabled = true;
+    try {
+      await deleteTask(taskIdToDelete);
+      closeDeleteModal();
+    } catch (error) {
+      alert(error.message || "Não foi possível excluir a tarefa.");
+    } finally {
+      confirmBtn.disabled = false;
+    }
+  });
+}
+
+async function deleteTask(taskId) {
+  await apiRequest(`/api/tasks/${taskId}`, { method: "DELETE" });
+
+  currentTasks = currentTasks.filter((task) => (task._id || task.id) !== taskId);
+  renderBoard(currentTasks);
+}
+
+/* ============================================================
+   CRIAÇÃO E EDIÇÃO DE TAREFA
+   Criar  -> POST  {API_BASE}/api/tasks
+   Editar -> PATCH {API_BASE}/api/tasks/:id  (envia apenas os
+             campos alterados pelo usuário)
+   ============================================================ */
+
+let taskBeingEdited = null; // null = criando | objeto da tarefa = editando
+
+function setPriorityActive(value) {
+  const priorityButtons = document.querySelectorAll(".priority-btn");
+  const priorityInput = document.getElementById("taskPrioridade");
+
+  priorityButtons.forEach((btn) => btn.classList.remove("active"));
+  const target = document.querySelector(`.priority-btn[data-value="${value}"]`)
+    || document.querySelector('.priority-btn[data-value="media"]');
+  target?.classList.add("active");
+  if (priorityInput) priorityInput.value = target?.dataset.value || "media";
+}
+
+// Abre o popup. Sem argumento -> modo "Nova Tarefa".
+// Passando uma tarefa -> modo "Editar Tarefa", com os campos pré-preenchidos.
+function openTaskModal(task = null) {
+  const modal = document.getElementById("taskModal");
+  const form = document.getElementById("taskForm");
+  const dataLimiteInput = document.getElementById("taskDataLimite");
+  const title = document.getElementById("taskModalTitle");
+  const subtitle = document.getElementById("taskModalSubtitle");
+  const submitLabel = document.getElementById("taskSubmitLabel");
+
+  if (!modal || !form) return;
+
+  form.reset();
+  taskBeingEdited = task;
+
+  if (task) {
+    // ---- modo edição: preenche o formulário com os dados da tarefa ----
+    if (title) title.textContent = "Editar Tarefa";
+    if (subtitle) subtitle.textContent = "Atualize apenas os campos que deseja alterar";
+    if (submitLabel) submitLabel.textContent = "Salvar Alterações";
+
+    form.elements["tarefa"].value = task.tarefa || "";
+    form.elements["descricao"].value = task.descricao || "";
+    form.elements["categoria"].value = task.categoria || "Outras Demandas";
+    form.elements["status"].value = task.status || "a_fazer";
+    form.elements["tempo_gasto"].value = task.tempo_gasto ?? 0;
+
+    if (dataLimiteInput) {
+      dataLimiteInput.value = task.data_limite
+        ? new Date(task.data_limite).toISOString().slice(0, 10)
+        : "";
+    }
+
+    setPriorityActive(task.prioridade || "media");
+  } else {
+    // ---- modo criação: valores padrão ----
+    if (title) title.textContent = "Nova Tarefa";
+    if (subtitle) subtitle.textContent = "Preencha os detalhes da sua próxima entrega";
+    if (submitLabel) submitLabel.textContent = "Criar Tarefa";
+
+    setPriorityActive("media");
+
+    if (dataLimiteInput) {
+      dataLimiteInput.value = new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  modal.classList.add("active");
+}
+
+function closeTaskModal() {
+  taskBeingEdited = null;
+  document.getElementById("taskModal")?.classList.remove("active");
+}
+
+function setupTaskModal() {
+  const modal = document.getElementById("taskModal");
+  const form = document.getElementById("taskForm");
+  const closeBtn = document.getElementById("closeTaskModalBtn");
+  const cancelBtn = document.getElementById("cancelTaskBtn");
+  const priorityButtons = document.querySelectorAll(".priority-btn");
+  const priorityInput = document.getElementById("taskPrioridade");
+
+  if (!modal || !form) return;
+
+  priorityButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      priorityButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      if (priorityInput) priorityInput.value = btn.dataset.value;
+    });
+  });
+
+  closeBtn?.addEventListener("click", closeTaskModal);
+  cancelBtn?.addEventListener("click", closeTaskModal);
+
+  // Clicar fora do modal ou pressionar Esc NÃO fecha o popup.
+  // O usuário só sai pelo botão de fechar (X) ou "Cancelar".
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+
+    const tarefa = (formData.get("tarefa") || "").trim();
+    if (!tarefa) {
+      alert("Informe o nome da tarefa.");
+      return;
+    }
+
+    const valores = {
+      tarefa,
+      descricao: (formData.get("descricao") || "").trim(),
+      categoria: formData.get("categoria"),
+      status: formData.get("status"),
+      prioridade: formData.get("prioridade"),
+      tempo_gasto: parseFloat(formData.get("tempo_gasto")) || 0,
+      data_limite: formData.get("data_limite") || null
+    };
+
+    submitBtn.disabled = true;
+    try {
+      if (taskBeingEdited) {
+        // ---- Edição: envia somente os campos que o usuário alterou ----
+        const taskId = taskBeingEdited._id || taskBeingEdited.id;
+        const original = taskBeingEdited;
+        const originalDataLimite = original.data_limite
+          ? new Date(original.data_limite).toISOString().slice(0, 10)
+          : "";
+
+        const payload = {};
+        if (valores.tarefa !== (original.tarefa || "")) payload.tarefa = valores.tarefa;
+        if (valores.descricao !== (original.descricao || "")) payload.descricao = valores.descricao;
+        if (valores.categoria !== (original.categoria || "")) payload.categoria = valores.categoria;
+        if (valores.status !== (original.status || "")) payload.status = valores.status;
+        if (valores.prioridade !== (original.prioridade || "")) payload.prioridade = valores.prioridade;
+        if (valores.tempo_gasto !== (original.tempo_gasto ?? 0)) payload.tempo_gasto = valores.tempo_gasto;
+        if ((valores.data_limite || "") !== originalDataLimite) payload.data_limite = valores.data_limite;
+
+        if (Object.keys(payload).length === 0) {
+          closeTaskModal();
+          return;
+        }
+
+        const tarefaAtualizada = await apiRequest(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload)
+        });
+
+        currentTasks = currentTasks.map((t) => {
+          const id = t._id || t.id;
+          return id === taskId ? tarefaAtualizada : t;
+        });
+
+        renderBoard(currentTasks);
+        closeTaskModal();
+      } else {
+        // ---- Criação ----
+        const novaTarefa = await apiRequest("/api/tasks", {
+          method: "POST",
+          body: JSON.stringify(valores)
+        });
+
+        currentTasks.push(novaTarefa);
+        renderBoard(currentTasks);
+        closeTaskModal();
+      }
+    } catch (error) {
+      alert(error.message || "Não foi possível salvar a tarefa.");
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
+
 async function moveTask(taskId, newStatus) {
   board.classList.add("board-updating");
 
@@ -196,7 +478,7 @@ function setupUserInfo() {
 
   if (user.nome && userName) userName.textContent = user.nome;
   if (user.name && userName) userName.textContent = user.name;
-  if (userRole) userRole.textContent = user.role || "Usuário";
+  if (userRole) userRole.textContent = "Desenvolvedor";
   if (avatar) avatar.textContent = getUserInitials();
 }
 
@@ -242,6 +524,21 @@ function formatCategory(category) {
   return category || "Outras Demandas";
 }
 
+const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+// Formata data_limite no padrão "dd mmm" (ex: "15 jun")
+function formatDataLimite(dataISO) {
+  if (!dataISO) return null;
+
+  const data = new Date(dataISO);
+  if (Number.isNaN(data.getTime())) return null;
+
+  const dia = String(data.getUTCDate()).padStart(2, "0");
+  const mes = MESES_ABREV[data.getUTCMonth()];
+
+  return `${dia} ${mes}`;
+}
+
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -257,11 +554,22 @@ async function initBoard() {
 
   setupUserInfo();
   setupLogout();
+  setupDeleteModal();
+  setupTaskModal();
   try {
     const tasks = await fetchTasks();
     renderBoard(tasks);
   } catch (error) {
     board.innerHTML = `<p class="board-message">${escapeHtml(error.message)}</p>`;
+  }
+
+  // Veio da tela 2 com "Nova Tarefa" -> abre o popup automaticamente
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("novaTarefa") === "1") {
+    openTaskModal();
+    params.delete("novaTarefa");
+    const newUrl = window.location.pathname + (params.toString() ? `?${params}` : "");
+    window.history.replaceState({}, "", newUrl);
   }
 }
 
@@ -270,7 +578,7 @@ window.addEventListener("pageshow", () => {
 });
 
 document.querySelectorAll(".fab, .btn-accent").forEach((button) => {
-  button.addEventListener("click", () => alert("A criação de tarefas será integrada na próxima etapa."));
+  button.addEventListener("click", () => openTaskModal());
 });
 
 initBoard();
