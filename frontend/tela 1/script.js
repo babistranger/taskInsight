@@ -18,7 +18,9 @@ const COLUMNS = [
 ];
 
 const board = document.getElementById("board");
+const statusFilter = document.getElementById("statusFilter");
 let currentTasks = [];
+let activeStatusFilter = "";
 
 function getToken() {
   return localStorage.getItem("ti_token");
@@ -64,15 +66,37 @@ async function apiRequest(path, options = {}) {
   return data;
 }
 
-async function fetchTasks() {
-  return apiRequest("/api/tasks");
+// Busca tarefas reais na API. Quando recebe status, usa o filtro do backend: GET /api/tasks?status=...
+async function fetchTasks(status = "") {
+  const query = status ? "?status=" + encodeURIComponent(status) : "";
+  return apiRequest("/api/tasks" + query);
+}
+
+// Recarrega o Kanban respeitando o filtro selecionado, sem usar dados mockados.
+async function refreshBoard() {
+  board.classList.add("board-updating");
+
+  try {
+    const tasks = await fetchTasks(activeStatusFilter);
+    renderBoard(tasks);
+  } catch (error) {
+    board.innerHTML = "<p class=\"board-message\">" + escapeHtml(error.message) + "</p>";
+  } finally {
+    board.classList.remove("board-updating");
+  }
 }
 
 function renderBoard(tasks) {
   currentTasks = tasks;
   board.innerHTML = "";
+  board.classList.toggle("board-filtered", Boolean(activeStatusFilter));
 
-  COLUMNS.forEach((col) => {
+  // Com filtro ativo, mantem visivel apenas a coluna escolhida pelo usuario.
+  const visibleColumns = activeStatusFilter
+    ? COLUMNS.filter((col) => col.id === activeStatusFilter)
+    : COLUMNS;
+
+  visibleColumns.forEach((col) => {
     const colTasks = tasks.filter((task) => task.status === col.id);
     const wrap = document.createElement("div");
 
@@ -508,6 +532,19 @@ function setupLogout() {
   });
 }
 
+// Liga o select de status ao recarregamento real das tarefas no backend.
+function setupStatusFilter() {
+  if (!statusFilter) return;
+
+  statusFilter.addEventListener("change", async () => {
+    activeStatusFilter = statusFilter.value;
+    statusFilter.disabled = true;
+    await refreshBoard();
+    statusFilter.disabled = false;
+    statusFilter.focus();
+  });
+}
+
 function getUserInitials() {
   const user = JSON.parse(localStorage.getItem("ti_user") || "{}");
   const name = user.nome || user.name || "Usuario";
@@ -556,12 +593,8 @@ async function initBoard() {
   setupLogout();
   setupDeleteModal();
   setupTaskModal();
-  try {
-    const tasks = await fetchTasks();
-    renderBoard(tasks);
-  } catch (error) {
-    board.innerHTML = `<p class="board-message">${escapeHtml(error.message)}</p>`;
-  }
+  setupStatusFilter();
+  await refreshBoard();
 
   // Veio da tela 2 com "Nova Tarefa" -> abre o popup automaticamente
   const params = new URLSearchParams(window.location.search);

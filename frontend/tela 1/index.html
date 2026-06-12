@@ -92,8 +92,17 @@
       <section class="content">
         <div class="page-head">
           <h2>Quadro de Tarefas</h2>
-          <!-- Futuro: abrir painel de filtros e chamar GET /api/tasks?status=...&prioridade=... -->
-          <button class="btn btn-outline"><i data-lucide="sliders-horizontal"></i> Filtrar</button>
+          <!-- Filtro real: chama GET /api/tasks?status=... -->
+          <div class="filter-control">
+            <label for="statusFilter"><i data-lucide="sliders-horizontal"></i> Filtrar</label>
+            <select id="statusFilter" aria-label="Filtrar tarefas por status">
+              <option value="">Todos os status</option>
+              <option value="a_fazer">A Fazer</option>
+              <option value="em_progresso">Em Progresso</option>
+              <option value="em_revisao">Em Revisão</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </div>
         </div>
 
         <!-- ⭐ Container onde o KANBAN é renderizado dinamicamente.
