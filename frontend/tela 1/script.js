@@ -19,6 +19,7 @@ const COLUMNS = [
 
 const board = document.getElementById("board");
 const statusFilter = document.getElementById("statusFilter");
+const zoomControl = document.getElementById("zoomControl");
 let currentTasks = [];
 let activeStatusFilter = "";
 
@@ -545,6 +546,20 @@ function setupStatusFilter() {
   });
 }
 
+// Aplica zoom geral na interface e preserva a escolha do usuario no navegador.
+function setupZoomControl() {
+  if (!zoomControl) return;
+
+  const savedZoom = localStorage.getItem("ti_zoom") || "1";
+  document.body.style.zoom = savedZoom;
+  zoomControl.value = savedZoom;
+
+  zoomControl.addEventListener("change", () => {
+    document.body.style.zoom = zoomControl.value;
+    localStorage.setItem("ti_zoom", zoomControl.value);
+  });
+}
+
 function getUserInitials() {
   const user = JSON.parse(localStorage.getItem("ti_user") || "{}");
   const name = user.nome || user.name || "Usuario";
@@ -594,6 +609,7 @@ async function initBoard() {
   setupDeleteModal();
   setupTaskModal();
   setupStatusFilter();
+  setupZoomControl();
   await refreshBoard();
 
   // Veio da tela 2 com "Nova Tarefa" -> abre o popup automaticamente

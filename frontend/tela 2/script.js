@@ -298,6 +298,21 @@ function setupLogout() {
 
 setupLogout();
 
+// Aplica zoom geral apenas nesta tela e preserva a escolha do usuario no navegador.
+function setupZoomControl() {
+  const zoomControl = document.getElementById("zoomControl");
+  if (!zoomControl) return;
+
+  const savedZoom = localStorage.getItem("ti_zoom_analytics") || "1";
+  document.body.style.zoom = savedZoom;
+  zoomControl.value = savedZoom;
+
+  zoomControl.addEventListener("change", () => {
+    document.body.style.zoom = zoomControl.value;
+    localStorage.setItem("ti_zoom_analytics", zoomControl.value);
+  });
+}
+
 function setupSidebarToggle() {
   const toggle = document.querySelector(".nav-toggle");
   const group = document.querySelector(".nav-group");
@@ -311,6 +326,7 @@ function setupSidebarToggle() {
 }
 
 setupSidebarToggle();
+setupZoomControl();
 
 window.addEventListener("pageshow", () => {
   ensureAuthenticated();
